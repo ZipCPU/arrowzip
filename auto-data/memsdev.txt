@@ -1,0 +1,102 @@
+################################################################################
+##
+## Filename: 	memsdev.txt
+##
+## Project:	AutoFPGA, a utility for composing FPGA designs from peripherals
+##
+## Purpose:	Describes the MEMS controller
+##
+## Creator:	Dan Gisselquist, Ph.D.
+##		Gisselquist Technology, LLC
+##
+################################################################################
+##
+## Copyright (C) 2018, Gisselquist Technology, LLC
+##
+## This program is free software (firmware): you can redistribute it and/or
+## modify it under the terms of  the GNU General Public License as published
+## by the Free Software Foundation, either version 3 of the License, or (at
+## your option) any later version.
+##
+## This program is distributed in the hope that it will be useful, but WITHOUT
+## ANY WARRANTY; without even the implied warranty of MERCHANTIBILITY or
+## FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+## for more details.
+##
+## You should have received a copy of the GNU General Public License along
+## with this program.  (It's in the $(ROOT)/doc directory.  Run make with no
+## target there if the PDF file isn't present.)  If not, see
+## <http://www.gnu.org/licenses/> for a copy.
+##
+## License:	GPL, v3, as defined and found on www.gnu.org,
+##		http://www.gnu.org/licenses/gpl.html
+##
+##
+################################################################################
+##
+##
+@PREFIX=mems
+@NADDR=128
+@ACCESS=MEMS_ACCESS
+@SLAVE.TYPE=DOUBLE
+@SLAVE.BUS=wb
+@INT.MEMSA.WIRE= mems_int_a
+@INT.MEMSA.PIC=  buspic
+@INT.MEMSB.WIRE= mems_int_b
+@INT.MEMSB.PIC=  buspic
+@INT.MEMSDONE.WIRE= mems_done
+@INT.MEMSDONE.PIC=  buspic
+@MAIN.PORTLIST=
+		// Top level MEMS (SPI) I/O ports
+		o_mems_cs_n, o_mems_sck, o_mems_mosi, i_mems_miso, i_mems_int
+@MAIN.IODECL=
+	// MEMS SPI
+	output	wire		o_mems_cs_n, o_mems_sck, o_mems_mosi;
+	input	wire		i_mems_miso;
+	input	wire	[1:0]	i_mems_int;
+@MAIN.DEFNS=
+	wire	[1:0]		mems_int;
+@MAIN.INSERT=
+	mems @$(PREFIX)i(i_clk, i_reset,
+		(wb_cyc), (wb_stb)&&(mems_sel), wb_we,
+			wb_addr[7:0], wb_data,
+			mems_ack, mems_stall, mems_data,
+				mems_int, mems_done,
+			o_mems_cs_n, o_mems_sck,
+				o_mems_mosi, i_mems_miso,
+			i_mems_int);
+	assign	mems_int_a = mems_int[0];
+	assign	mems_int_b = mems_int[1];
+@MAIN.ALT=
+	assign	o_mems_sck  = 1'b1;
+	assign	o_mems_cs_n = 1'b1;
+	assign	o_mems_mosi = 1'b1;
+@REGS.N= 1
+@DEVID=MEMS
+@REGDEFS.H.DEFNS=
+// No defines yet
+@REGS.NOTE= // MEMS register(s)
+@REGS.0= 0 R_@$(DEVID) $(DEVID)
+@BDEF.OSDEF=_BOARD_HAS_MEMS_SENSOR
+@BDEF.OSVAL=extern char _mems[@$NBYTES];
+@REGDEFS.H.INSERT=
+
+# @SIM.INCLUDE+=
+# #include "memssim.h"
+# @SIM.DEFNS+=
+# #ifdef	@$(ACCESS)
+# 	QSPIFLASHSIM	*m_@$(MEM.NAME);
+# #endif
+# @SIM.INIT+=
+# #ifdef	@$(ACCESS)
+# 	m_@$(DEVID) = new @$(DEVID);
+# #endif
+# @SIM.TICK +=
+# #ifdef	@$(ACCESS)
+#		m_core->i_qspi_dat = (*m_@$(MEM.NAME))(m_core->o_qspi_cs_n,
+#			m_core->o_qspi_sck, m_core->o_qspi_dat);
+# #endif
+#
+#
+@RTL.MAKE.GROUP= MEMS
+@RTL.MAKE.FILES= mems.v

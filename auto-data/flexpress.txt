@@ -1,0 +1,175 @@
+################################################################################
+##
+## Filename: 	flexpress.txt
+##
+## Project:	AutoFPGA, a utility for composing FPGA designs from peripherals
+##
+## Purpose:	Describes the flash in our new data format.
+##
+## Creator:	Dan Gisselquist, Ph.D.
+##		Gisselquist Technology, LLC
+##
+################################################################################
+##
+## Copyright (C) 2017-2018, Gisselquist Technology, LLC
+##
+## This program is free software (firmware): you can redistribute it and/or
+## modify it under the terms of  the GNU General Public License as published
+## by the Free Software Foundation, either version 3 of the License, or (at
+## your option) any later version.
+##
+## This program is distributed in the hope that it will be useful, but WITHOUT
+## ANY WARRANTY; without even the implied warranty of MERCHANTIBILITY or
+## FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+## for more details.
+##
+## You should have received a copy of the GNU General Public License along
+## with this program.  (It's in the $(ROOT)/doc directory.  Run make with no
+## target there if the PDF file isn't present.)  If not, see
+## <http://www.gnu.org/licenses/> for a copy.
+##
+## License:	GPL, v3, as defined and found on www.gnu.org,
+##		http://www.gnu.org/licenses/gpl.html
+##
+##
+################################################################################
+##
+##
+@PREFIX= flash
+@$LGFLASHSZ.EXPR=23
+@$NADDR=(1<<(@$LGFLASHSZ-2))
+@$NBYTES=(1<<@$LGFLASHSZ)
+@NBYTES.FORMAT=0x%08x
+@ACCESS= FLASH_ACCESS
+@SLAVE.TYPE=MEMORY
+@SLAVE.BUS=wb
+@LD.PERM=rx
+@TOP.PORTLIST=
+		// Top level Dual-SPI I/O ports
+		o_dspi_cs_n, o_dspi_sck, io_dspi_dat
+@TOP.IODECL=
+	// Dual SPI flash
+	output	wire		o_dspi_cs_n;
+	output	wire		o_dspi_sck;
+	inout	wire	[1:0]	io_dspi_dat;
+@TOP.DEFNS=
+	wire	[1:0]	dspi_bmod, w_dspi_sck;
+	wire	[1:0]	dspi_dat;
+@TOP.MAIN=
+		// Dual SPI flash
+		o_dspi_cs_n, w_dspi_sck, dspi_dat, io_dspi_dat, dspi_bmod
+@TOP.INSERT=
+	//
+	//
+	// Wires for setting up the QSPI flash wishbone peripheral
+	//
+	//
+	// QSPI)BMOD, Dual SPI bus mode, Bus modes are:
+	//	0?	Normal serial mode, one bit in one bit out
+	//	10	Dual SPI mode, going out
+	//	11	Dual SPI mode coming from the device (read mode)
+	assign io_dspi_dat = (~dspi_bmod[1])?({1'bz,dspi_dat[0]})
+				:((dspi_bmod[0])?(2'bzz):(dspi_dat[1:0]));
+	altoddr dspi_ddr_sck(
+		.outclock(s_clk),
+		.din({ w_dspi_sck[1], w_dspi_sck[0] }),
+		.pad_out(o_dspi_sck));
+
+@MAIN.PORTLIST=
+		// The QSPI Flash
+		o_dspi_cs_n, o_dspi_sck, o_dspi_dat, i_dspi_dat, o_dspi_mod
+@MAIN.IODECL=
+	// The QSPI flash
+	output	wire		o_dspi_cs_n;
+	output	wire	[1:0]	o_dspi_sck;
+	output	wire	[1:0]	o_dspi_dat;
+	input	wire	[1:0]	i_dspi_dat;
+	output	wire	[1:0]	o_dspi_mod;
+@MAIN.INSERT=
+	qflashxpress @$(PREFIX)i(i_clk, i_reset,
+			(wb_cyc), (wb_stb)&&(@$(PREFIX)_sel),
+				wb_addr[(@$LGFLASHSZ-3):0],
+			@$(PREFIX)_ack, @$(PREFIX)_stall, @$(PREFIX)_data,
+			o_dspi_sck, o_dspi_cs_n, o_dspi_mod, o_dspi_dat, i_dspi_dat);
+@MAIN.ALT=
+	assign	o_dspi_sck  = 1'b0;
+	assign	o_dspi_cs_n = 1'b1;
+	assign	o_dspi_mod  = 2'b01;
+	assign	o_dspi_dat  = 2'b11;
+@MEM.NAME= flash
+@MEM.ACCESS = rx
+@REGS.N= 1
+@DEVID=FLASH
+@REGDEFS.H.DEFNS=
+#define	@$(DEVID)BASE	@$[0x%08x](REGBASE)
+#define	@$(DEVID)LEN	@$NBYTES
+#define	@$(DEVID)LGLEN	@$LGFLASHSZ
+@REGS.0= 0 R_@$(DEVID) FLASH
+@BDEF.OSDEF=_BOARD_HAS_FLASH
+@BDEF.OSVAL=extern char _@$(PREFIX)[@$NBYTES];
+@LDSCRIPT.PSTR=	rx
+@LDSCRIPT.PTR=	@$(PREFIX)
+@LDSCRIPT.DEF=
+_@$(PREFIX)=ORIGIN(@$(PREFIX));
+@REGDEFS.H.INSERT=
+
+@SIM.INCLUDE+=
+#include "dspiflashsim.h"
+@SIM.DEFNS+=
+#ifdef	@$(ACCESS)
+	QSPIFLASHSIM	*m_@$(MEM.NAME);
+#endif
+@SIM.INIT+=
+#ifdef	@$(ACCESS)
+	m_@$(MEM.NAME) = new QSPIFLASHSIM(FLASHLGLEN);
+	m_last_qspi_dat = 15;
+#endif
+@SIM.TICK +=
+#ifdef	@$(ACCESS)
+
+		int	idspi;
+		// The toplevel logic creates a one cycle/clock delay.  Emulate
+		// it here.
+		m_core->i_dspi_dat = m_last_dspi_dat;
+		if ((m_core->o_dspi_sck == 3)||(m_core->o_dspi_sck == 0)) {
+			idspi = m_flash(m_core->o_dspi_cs_n,
+						m_core->o_dspi_sck&1,
+						m_core->o_dspi_dat);
+		} else {
+			idspi = m_flash(m_core->o_dspi_cs_n,
+						(m_core->o_dspi_sck&2)?1:0,
+						m_core->o_dspi_dat);
+			idspi = m_flash(m_core->o_dspi_cs_n,
+						(m_core->o_dspi_sck&1)?1:0,
+						m_core->o_dspi_dat);
+		}
+		if (m_core->o_dspi_mod&2) {
+			// If we are driving the lines, drive the inputs
+			// as well.
+			if (m_core->o_dspi_mod&1)
+				; // 2'b11	// Not driving any lines
+			else	// 2'b10
+				idspi = m_core->o_dspi_dat;
+		} else {
+			// 2'b0x
+			//
+			// Turn on top two bits (unused in SPI mode)
+			idspi |= 0xc;
+			// Replace bottom bit with o_dspi_dat[0]
+			idspi &= 0xe; // Turn off bottom bit
+			idspi |= m_core->o_dspi_dat&1;
+		}
+		m_last_dspi_dat = idspi;
+
+		m_core->i_dspi_dat = (*m_@$(MEM.NAME))(m_core->o_dspi_cs_n,
+			m_core->o_dspi_sck, m_core->o_dspi_dat);
+#endif
+@SIM.LOAD +=
+			m_@$(MEM.NAME)->load(start, &buf[offset], wlen);
+#
+#
+#
+#
+#
+@RTL.MAKE.GROUP= FLASH
+@RTL.MAKE.FILES= qflashxpress.v
