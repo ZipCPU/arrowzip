@@ -2,7 +2,7 @@
 ##
 ## Filename:	auto-data/Makefile
 ##
-## Project:	ZBasic, a generic toplevel impl using the full ZipCPU
+## Project:	ArrowZip, a demonstration of the Arrow MAX1000 FPGA board
 ##
 ## Purpose:	To direct the build of the autofpga automatically generated
 ##		files.  The various configuration files are the *.txt files

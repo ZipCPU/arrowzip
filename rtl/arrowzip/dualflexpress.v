@@ -1,8 +1,8 @@
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Filename:	qflashxpress.v
+// Filename:	dualflexpress.v
 //
-// Project:	CMod S6 System on a Chip, ZipCPU demonstration project
+// Project:	ArrowZip, a demonstration of the Arrow MAX1000 FPGA board
 //
 // Purpose:	To provide wishbone controlled read access (and read access
 //		*only*) to the QSPI flash, using a flash clock of 80MHz, and
@@ -37,7 +37,7 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Copyright (C) 2015-2017, Gisselquist Technology, LLC
+// Copyright (C) 2015-2018, Gisselquist Technology, LLC
 //
 // This program is free software (firmware): you can redistribute it and/or
 // modify it under the terms of  the GNU General Public License as published
@@ -140,8 +140,8 @@ module	qflashxpress(i_clk, i_reset,
 				m_state <= 2'b10;
 			m_cs_n <= 1'b0;
 			m_clk  <= {(2){!m_counter[2]}};
-			m_data <= { 32'hfff0f0ff }; // EB command
-			m_data[31:30] <= 0; // just ... not yet
+			m_data <= { 32'hbb00_0a00 }; // EB command
+			m_data[31:30] <= 2'b11; // just ... not yet
 			end
 		2'b10: begin
 			// Rest, before issuing our initial read command
@@ -150,14 +150,14 @@ module	qflashxpress(i_clk, i_reset,
 				m_state <= 2'b11;
 			m_cs_n <= 1'b1;	// Rest the interface
 			m_clk  <= 2'b11;
-			m_data <= { 32'hfff0f0ff }; // EB command
+			m_data <= { 8'hbb_00_0a_00 }; // BB command
 			end
 		2'b11: begin
 			if (m_counter[14:0] == 15'd138+15'd48+15'd10)
 				maintenance <= 1'b0;
 			m_cs_n <= 1'b0;
 			m_clk  <= (m_clk == 2'b11)? 2'b10 : 2'b01;
-			if (m_clk == 2'b01) // EB QuadIO Read Cmd
+			if (m_clk == 2'b01) // BB Fast Read Dual I/O Cmd
 				m_data <= {m_data[29:0], 2'h0};
 			// We depend upon the non-maintenance code to provide
 			// our first (bogus) address, mode, dummy cycles, and
@@ -217,22 +217,22 @@ module	qflashxpress(i_clk, i_reset,
 		else if ((o_wb_ack)&&(!pipe_req))
 			pre_ack <= 1'b0;
 
-	reg	[43:0]	clk_pipe;
+	reg	[65:0]	clk_pipe;
 	initial	clk_pipe = -1;
 	always @(posedge i_clk)
 		if (((i_wb_stb)&&(!o_wb_stall)&&(!pipe_req))||(maintenance))
-			clk_pipe <= { 2'b00, {(21){2'b01}}};
+			clk_pipe <= { 2'b00, {(32){2'b01}}};
 		else if (((i_wb_stb)&&(!o_wb_stall))||(maintenance))
-			clk_pipe <= { {(8){2'b01}}, {(14){2'b11}} };
+			clk_pipe <= { {(16){2'b01}}, {(17){2'b11}} };
 		else
-			clk_pipe <= { clk_pipe[41:0], 2'b11 };
-	assign	o_dspi_sck = (maintenance)? m_clk : clk_pipe[43:42];
-	assign	o_dspi_cs_n= (maintenance)?m_cs_n : (clk_pipe[43:42] == 2'b11);
+			clk_pipe <= { clk_pipe[63:0], 2'b11 };
+	assign	o_dspi_sck = (maintenance)? m_clk : clk_pipe[63:62];
+	assign	o_dspi_cs_n= (maintenance)?m_cs_n : (clk_pipe[63:62] == 2'b11);
 
 	reg	[9:0]	mod_pipe;
 	always @(posedge i_clk)
 		if(((i_wb_stb)&&(!o_wb_stall)&&(!pipe_req))||(maintenance))
-			mod_pipe <= { 10'h0 }; // Always quad, but in/out
+			mod_pipe <= { 10'h0 }; // Always dual, but in/out
 		else
 			mod_pipe <= { mod_pipe[8:0], 1'b1 }; // Add input at end
 	assign	o_dspi_mod = (maintenance) ? m_mod :(mod_pipe[9]? 2'b11:2'b10);
@@ -240,16 +240,16 @@ module	qflashxpress(i_clk, i_reset,
 	initial	busy_pipe = 22'h3fffff;
 	always @(posedge i_clk)
 		if (((i_wb_stb)&&(!o_wb_stall)&&(!pipe_req))||(maintenance))
-			busy_pipe <= { 22'h3fffff };
+			busy_pipe <= { 33'h1ff_ff_ff_ff };
 		else if ((i_wb_stb)&&(!o_wb_stall))
-			busy_pipe <= { 22'h3fc000 };
+			busy_pipe <= { 33'h1f8_00_00_00 };
 		else
-			busy_pipe <= { busy_pipe[20:0], 1'b0 };
+			busy_pipe <= { busy_pipe[31:0], 1'b0 };
 
 	initial	o_wb_stall = 1'b1;
 	always @(posedge i_clk)
 		o_wb_stall <= ((i_wb_stb)&&(!o_wb_stall))
-			||(busy_pipe[19])||((busy_pipe[20])&&(!pipe_req));
+			||(busy_pipe[30])||((busy_pipe[31])&&(!pipe_req));
 
 	reg	ack_pipe;
 	initial	ack_pipe = 1'b0;

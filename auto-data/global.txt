@@ -2,7 +2,7 @@
 ##
 ## Filename: 	global.txt
 ##
-## Project:	ZBasic, a generic toplevel impl using the full ZipCPU
+## Project:	ArrowZip, a demonstration of the Arrow MAX1000 FPGA board
 ##
 ## Purpose:	Capture any global configuration parameters
 ##
@@ -36,7 +36,7 @@
 ##
 ##
 @LEGAL=../auto-data/legalgen.txt
-@PROJECT=ZBasic, a generic toplevel implementation using the full ZipCPU
+@PROJECT=ArrowZip, a demonstration of the Arrow MAX1000 FPGA board
 # @XDC.FILE=nexysv.xdc
 # @XDC.FILE=arty.xdc
 #

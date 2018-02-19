@@ -3,7 +3,7 @@
 ##
 ## Filename:	mkdatev.pl
 ##
-## Project:	ZBasic, a generic toplevel impl using the full ZipCPU
+## Project:	ArrowZip, a demonstration of the Arrow MAX1000 FPGA board
 ##
 ## Purpose:	This file creates a file containing a `define DATESTAMP
 ##		which can be used to tell when the build took place.
@@ -51,7 +51,7 @@ print <<"EOM";
 //
 // Filename: 	builddate.v
 //
-// Project:	ZBasic, a generic toplevel impl using the full ZipCPU
+// Project:	ArrowZip, a demonstration of the Arrow MAX1000 FPGA board
 //
 // Purpose:	This file records the date of the last build.  Running "make"
 //		in the main directory will create this file.  The `define found

@@ -2,7 +2,7 @@
 ##
 ## Filename: 	buserr.txt
 ##
-## Project:	AutoFPGA, a utility for composing FPGA designs from peripherals
+## Project:	ArrowZip, a demonstration of the Arrow MAX1000 FPGA board
 ##
 ## Purpose:	Provide a readable memory location containing the address of the
 ##		last bus error.

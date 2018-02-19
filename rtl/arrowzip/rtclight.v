@@ -1,8 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 //
 // Filename: 	rtclight.v
-//		
-// Project:	A Wishbone Controlled Real--time Clock Core
 //
 // Project:	ArrowZip, a demonstration of the Arrow MAX1000 FPGA board
 //

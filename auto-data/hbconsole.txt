@@ -2,7 +2,7 @@
 ##
 ## Filename: 	hbconsole.txt
 ##
-## Project:	AutoFPGA, a utility for composing FPGA designs from peripherals
+## Project:	ArrowZip, a demonstration of the Arrow MAX1000 FPGA board
 ##
 ## Purpose:	Provide access to both a debugging bus and a console port for
 ##		the CPU.  The debugging bus will be given 7-bit transfer codes
