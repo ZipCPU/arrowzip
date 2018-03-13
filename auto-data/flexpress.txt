@@ -41,6 +41,7 @@
 @$NBYTES=(1<<@$LGFLASHSZ)
 @NBYTES.FORMAT=0x%08x
 @ACCESS= FLASH_ACCESS
+@ERROR.WIRE=@$(PREFIX)_err
 @SLAVE.TYPE=MEMORY
 @SLAVE.BUS=wb
 @LD.PERM=rx
@@ -68,7 +69,7 @@
 	//	0?	Normal serial mode, one bit in one bit out
 	//	10	Dual SPI mode, going out
 	//	11	Dual SPI mode coming from the device (read mode)
-	assign io_dspi_dat = (~dspi_bmod[1])?({1'bz,dspi_dat[0]})
+	assign io_dspi_dat = (!dspi_bmod[1])?({1'bz,dspi_dat[0]})
 				:((dspi_bmod[0])?(2'bzz):(dspi_dat[1:0]));
 	altoddr dspi_ddr_sck(
 		.outclock(s_clk),
@@ -86,11 +87,15 @@
 	input	wire	[1:0]	i_dspi_dat;
 	output	wire	[1:0]	o_dspi_mod;
 @MAIN.INSERT=
-	qflashxpress @$(PREFIX)i(i_clk, i_reset,
+	dualflexpress @$(PREFIX)i(i_clk, i_reset,
 			(wb_cyc), (wb_stb)&&(@$(PREFIX)_sel),
 				wb_addr[(@$LGFLASHSZ-3):0],
 			@$(PREFIX)_ack, @$(PREFIX)_stall, @$(PREFIX)_data,
-			o_dspi_sck, o_dspi_cs_n, o_dspi_mod, o_dspi_dat, i_dspi_dat);
+			o_dspi_sck, o_dspi_cs_n, o_dspi_mod, o_dspi_dat,
+				i_dspi_dat,
+			((wb_stb)&&(flash_cfg_sel)), r_flash_cfg_data,
+			 	w_flash_cfg_data,
+			@$(PREFIX)_err);
 @MAIN.ALT=
 	assign	o_dspi_sck  = 1'b0;
 	assign	o_dspi_cs_n = 1'b1;
@@ -114,15 +119,16 @@ _@$(PREFIX)=ORIGIN(@$(PREFIX));
 @REGDEFS.H.INSERT=
 
 @SIM.INCLUDE+=
-#include "dspiflashsim.h"
+#include "qspiflashsim.h"
 @SIM.DEFNS+=
 #ifdef	@$(ACCESS)
 	QSPIFLASHSIM	*m_@$(MEM.NAME);
+	unsigned	m_last_dspi_dat;
 #endif
 @SIM.INIT+=
 #ifdef	@$(ACCESS)
 	m_@$(MEM.NAME) = new QSPIFLASHSIM(FLASHLGLEN);
-	m_last_qspi_dat = 15;
+	m_last_dspi_dat = 15;
 #endif
 @SIM.TICK +=
 #ifdef	@$(ACCESS)
@@ -132,14 +138,14 @@ _@$(PREFIX)=ORIGIN(@$(PREFIX));
 		// it here.
 		m_core->i_dspi_dat = m_last_dspi_dat;
 		if ((m_core->o_dspi_sck == 3)||(m_core->o_dspi_sck == 0)) {
-			idspi = m_flash(m_core->o_dspi_cs_n,
+			idspi = (*m_@$(MEM.NAME))(m_core->o_dspi_cs_n,
 						m_core->o_dspi_sck&1,
 						m_core->o_dspi_dat);
 		} else {
-			idspi = m_flash(m_core->o_dspi_cs_n,
+			idspi = (*m_@$(MEM.NAME))(m_core->o_dspi_cs_n,
 						(m_core->o_dspi_sck&2)?1:0,
 						m_core->o_dspi_dat);
-			idspi = m_flash(m_core->o_dspi_cs_n,
+			idspi = (*m_@$(MEM.NAME))(m_core->o_dspi_cs_n,
 						(m_core->o_dspi_sck&1)?1:0,
 						m_core->o_dspi_dat);
 		}
@@ -172,4 +178,23 @@ _@$(PREFIX)=ORIGIN(@$(PREFIX));
 #
 #
 @RTL.MAKE.GROUP= FLASH
-@RTL.MAKE.FILES= qflashxpress.v
+@RTL.MAKE.FILES= dualflexpress.v
+#
+#
+#
+@PREFIX=flash_cfg
+@SLAVE.TYPE=SINGLE
+@SLAVE.BUS=wb
+@NADDR=1
+@REGS.N=1
+@REGS.0= 0  R_FLASHCFG FLASHCFG
+@MAIN.DEFNS=
+	reg	[8:0]	r_flash_cfg_data;
+	wire	[9:0]	w_flash_cfg_data;
+@MAIN.INSERT=
+	always @(posedge i_clk)
+	if ((wb_stb)&&(@$(PREFIX)_sel))
+		r_flash_cfg_data <= wb_data[8:0];
+
+
+	assign	flash_cfg_data = { 22'h0, w_flash_cfg_data };

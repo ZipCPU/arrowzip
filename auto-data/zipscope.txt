@@ -1,0 +1,36 @@
+@PREFIX=zipscope
+@DEVID=ZIPSCOPE
+@NADDR=2
+@SLAVE.TYPE=OTHER
+@SLAVE.BUS=wb
+@DEPENDS=INCLUDE_ZIPCPU
+@REGS.NOTE=// ZipCPU Scope
+@REGS.N=2
+@REGS.0=0 R_@$(DEVID) @$(DEVID)
+@REGS.1=1 R_@$(DEVID)D @$(DEVID)D
+@MAIN.INSERT=
+	wbscope #(.LGMEM(9), .SYNCHRONOUS(1)) @$(PREFIX)i(
+		i_clk, 1'b1, zip_trigger, zip_debug,
+		i_clk, wb_cyc,
+		  ((wb_stb)&&(@$(PREFIX)_sel)), wb_we, wb_addr[0], wb_data,
+		@$(PREFIX)_ack, @$(PREFIX)_stall, @$(PREFIX)_data,
+		@$(PREFIX)_int);
+@INT.ZIPSCOPE.WIRE=@$(PREFIX)_int
+@INT.ZIPSCOPE.PIC=buspic
+@BDEF.DEFN=
+#ifndef WBSCOPE_H
+#define WBSCOPE_H
+
+#define WBSCOPE_NO_RESET        0x80000000u
+#define WBSCOPE_TRIGGER         (WBSCOPE_NO_RESET|0x08000000u)
+#define WBSCOPE_MANUAL          (WBSCOPE_TRIGGER)
+#define WBSCOPE_DISABLE         0x04000000u
+
+typedef struct WBSCOPE_S {
+        unsigned s_ctrl, s_data;
+} WBSCOPE;
+#endif
+@BDEF.IOTYPE=WBSCOPE
+@BDEF.IONAME=_@$(PREFIX)
+@BDEF.OSDEF=_BOARD_HAS_@$(DEVID)
+@BDEF.OSVAL=static volatile @$(BDEF.IOTYPE) *const @$(BDEF.IONAME) = ((@$(BDEF.IOTYPE) *)@$REGBASE);

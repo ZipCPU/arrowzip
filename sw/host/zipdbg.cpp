@@ -55,7 +55,7 @@
 #include "zopcodes.h"
 #include "devbus.h"
 #include "regdefs.h"
-#include "ttybus.h"
+#include "hexbus.h"
 
 #include "port.h"
 
@@ -193,7 +193,19 @@ public:
 	void	step(void) { writeio(R_ZIPCTRL, CPU_STEP); m_state.step(); }
 	void	go(void) { writeio(R_ZIPCTRL, CPU_GO); }
 	void	halt(void) {	writeio(R_ZIPCTRL, CPU_HALT); }
-	bool	stalled(void) { return ((readio(R_ZIPCTRL)&CPU_STALL)==0); }
+	bool	stalled(void) {
+		unsigned s;
+		try {
+			s = readio(R_ZIPCTRL);
+		} catch(BUSERR er) {
+			endwin();
+			fprintf(stderr, "ERR: STALL-CHECK(BUS ERR, %08x)\n, while reading ZIPCTRL(%08x)\n",
+				er.addr, R_ZIPCTRL);
+			exit(EXIT_FAILURE);
+			throw(er);
+		}
+		return ((s&CPU_STALL)==0);
+	}
 
 	void	show_user_timers(bool v) {
 		m_show_users_timers = v;
@@ -267,10 +279,27 @@ public:
 		int errcount = 0;
 		unsigned int	s;
 
-		writeio(R_ZIPCTRL, CMD_HALT|(a&0x3f));
-		while((((s=readio(R_ZIPCTRL))&CPU_STALL)== 0)&&(errcount<MAXERR)
-				&&(!m_user_break))
-			errcount++;
+		try {
+			writeio(R_ZIPCTRL, CMD_HALT|(a&0x3f));
+		} catch(BUSERR er) {
+			endwin();
+			fprintf(stderr, "ERR: CMD_READ(BUS ERR, %08x), while writing ZIPCTRL(%08x)\n",
+				er.addr, R_ZIPCTRL);
+			exit(EXIT_FAILURE);
+			throw(er);
+		}
+
+		try {
+			while((((s=readio(R_ZIPCTRL))&CPU_STALL)== 0)&&(errcount<MAXERR)
+					&&(!m_user_break))
+				errcount++;
+		} catch(BUSERR er) {
+			endwin();
+			fprintf(stderr, "ERR: CMD_READ(BUS ERR, %08x)\n, while reading ZIPCTRL(%08x), waiting for CPU idle",
+				er.addr, R_ZIPCTRL);
+			exit(EXIT_FAILURE);
+			throw(er);
+		}
 		if (m_user_break) {
 			endwin();
 			exit(EXIT_SUCCESS);
@@ -288,7 +317,18 @@ public:
 			} printf("\n");
 			exit(EXIT_FAILURE);
 		}
-		return readio(R_ZIPDATA);
+
+		try {
+			s = readio(R_ZIPDATA);
+		} catch(BUSERR er) {
+			endwin();
+			fprintf(stderr, "ERR: CMD_READ(BUS ERR, %08x), while reading ZIPDATA(%08x)\n",
+				er.addr, R_ZIPDATA);
+			exit(EXIT_FAILURE);
+			throw(er);
+		}
+
+		return s;
 	}
 
 	void	cmd_write(unsigned int a, int v) {
@@ -296,8 +336,7 @@ public:
 		unsigned int	s;
 
 		writeio(R_ZIPCTRL, CMD_HALT|(a&0x3f));
-		while((((s=readio(R_ZIPCTRL))&CPU_STALL)== 0)&&(errcount<MAXERR)
-				&&(!m_user_break))
+		while((stalled())&&(errcount<MAXERR)&&(!m_user_break))
 			errcount++;
 		if (m_user_break) {
 			endwin();
@@ -305,6 +344,7 @@ public:
 		} else if (errcount >= MAXERR) {
 			endwin();
 			printf("ERR: errcount(%d) >= MAXERR on cmd_read(a=%2x)\n", errcount, a);
+			s = readio(R_ZIPCTRL);
 			printf("ZIPCTRL = 0x%08x", s);
 			if ((s & 0x0200)==0) printf(" STALL");
 			if  (s & 0x0400) printf(" HALTED");
@@ -334,7 +374,16 @@ public:
 		mvprintw(ln,0, "Peripherals");
 		mvprintw(ln,30,"%-50s", "CPU State: ");
 		{
-			unsigned int v = readio(R_ZIPCTRL);
+			unsigned int v = 0;
+			try {
+				v = readio(R_ZIPCTRL);
+			} catch (BUSERR er) {
+				endwin();
+				fprintf(stderr, "ERR: READ_STATE(BUS ERR, %08x)\n",
+					er.addr);
+				exit(EXIT_FAILURE);
+				throw(er);
+			}
 			mvprintw(ln,41, "0x%08x ", v);
 			// if (v & 0x010000)
 				// printw("INT ");
@@ -697,6 +746,9 @@ int	main(int argc, char **argv) {
 	} catch(const char *err) {
 		fprintf(stderr, "ERR: Caught exception -- %s\n", err);
 		eprintf("ERR: Caught exception -- %s\n", err);
+	} catch(BUSERR e) {
+		fprintf(stderr, "ERR: Bus err, 0x%08x", e.addr);
+		eprintf("ERR: Bus err, 0x%08x", e.addr);
 	} catch(...) {
 		fprintf(stderr, "ERR: Caught anonymous exception!!\n");
 		eprintf("ERR: Caught anonymous exception\n");
@@ -709,7 +761,7 @@ int	main(int argc, char **argv) {
 		printf("%s", gbl_errstr);
 		exit(-2);
 	} else if (gbl_errstr[0]) {
-		printf("ERR str, but no err code\n%s\n", gbl_errstr);
+		printf("ERR str, but no err code\nstr is: %s\n", gbl_errstr);
 	} else
 		printf("SUCCESS\n");
 

@@ -82,7 +82,7 @@
 //	Either way, no debugging output will be produced
 //
 // #define	DBGPRINTF	printf
-// #define	DBGPRINTF	filedump
+#define	DBGPRINTF	filedump
 //
 //
 #ifndef	DBGPRINTF
@@ -188,18 +188,20 @@ void	HEXBUS::writeio(const BUSW a, const BUSW v) {
 void	HEXBUS::writev(const BUSW a, const int p, const int len,
 		const BUSW *buf) {
 	char	*ptr;
-	int	nw = 0;
+	unsigned	nw = 0;
 
 	DBGPRINTF("WRITEV(%08x,%d,#%d,0x%08x ...)\n", a, p, len, buf[0]);
+
+assert((a&3)==0);
 
 	// Encode the address
 	ptr = encode_address(a|((p)?0:1));
 	m_lastaddr = a; m_addr_set = true;
 	m_nacks = 0;
 
-	while(nw < len) {
+	while(nw < (unsigned)len) {
 		*ptr++ = 'W'; *ptr = '\0';
-		if (m_buf[nw] != 0) {
+		if (buf[nw] != 0) {
 			sprintf(ptr, "%x\n", buf[nw]);
 			ptr += strlen(ptr);
 		} else {
@@ -207,19 +209,23 @@ void	HEXBUS::writev(const BUSW a, const int p, const int len,
 			*ptr = '\0';
 		}
 
-		DBGPRINTF("WRITEV-SUB(%08x%s,&buf[%d])\n", a+nw, (p)?"++":"", nw);
+		DBGPRINTF("WRITEV-SUB(%08x%s,&buf[%d] = 0x%08x,ACKS=%d)\n", a+(nw<<2), (p)?"++":"", nw, buf[nw], m_nacks);
 		m_dev->write(m_buf, ptr-m_buf);
-		DBGPRINTF(">> %s\n", m_buf);
+		DBGPRINTF(">> %s", m_buf);
 
-		readidle();
+		while(m_nacks < (unsigned)nw)
+			readidle();
 
 		nw ++;
 		ptr = m_buf;
 	}
 
+	DBGPRINTF("Missing %d acks still\n", (unsigned)len-m_nacks);
 	while(m_nacks < (unsigned)len)
 		readidle();
 
+	if (p)
+		m_lastaddr += (len<<2);
 	DBGPRINTF("WR: LAST ADDRESS LEFT AT %08x\n", m_lastaddr);
 }
 
@@ -301,7 +307,9 @@ char	*HEXBUS::encode_address(const HEXBUS::BUSW a) {
 	*ptr++ = HEXB_ADDR;
 
 	// Followed by the address in lower-case hex
-	sprintf(ptr, "%x", a);
+	// While I hate providing *ALL EIGHT* hex digits to this function,
+	// failing to do so causes overflows within the hexbus right now.
+	sprintf(ptr, "%08x", a);
 
 /*
 	// If we can use an address difference, will it be valuable to do so?
@@ -388,7 +396,8 @@ void	HEXBUS::readv(const HEXBUS::BUSW a, const int inc, const int len, HEXBUS::B
 		exit(EXIT_FAILURE);
 	}
 
-	DBGPRINTF("READV::COMPLETE\n");
+	DBGPRINTF("READV::COMPLETE, [%08x] -> %08x%s\n", a, buf[0],
+		(len>1)?", ...":"");
 }
 
 /*
@@ -470,10 +479,12 @@ HEXBUS::BUSW	HEXBUS::readword(void) {
 			} else if (m_cmd == HEXB_INT) {
 				m_interrupt_flag = true;
 			} else if (m_cmd == HEXB_ERR) {
-				DBGPRINTF("Bus error\n");
+				DBGPRINTF("Bus error(0x%08x)-readword\n",m_lastaddr);
 				m_bus_err = true;
 				throw BUSERR(m_lastaddr);
 			} else if (m_cmd == HEXB_IDLE) {
+				DBGPRINTF("Bus error(0x%08x,ABORT)\n",
+					m_lastaddr);
 				abort_countdown--;
 				if (0 == abort_countdown)
 					throw BUSERR(0);
@@ -566,7 +577,7 @@ void	HEXBUS::readidle(void) {
 				m_nacks++;
 			} else if (m_cmd == HEXB_ERR) {
 				// On an err, throw a BUSERR exception
-				DBGPRINTF("Bus error\n");
+				DBGPRINTF("Bus error(%08x)-readidle\n", m_lastaddr);
 				m_bus_err = true;
 				throw BUSERR(m_lastaddr);
 			} else if (m_cmd == HEXB_RESET) {

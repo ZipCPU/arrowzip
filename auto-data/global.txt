@@ -37,6 +37,7 @@
 ##
 @LEGAL=../auto-data/legalgen.txt
 @PROJECT=ArrowZip, a demonstration of the Arrow MAX1000 FPGA board
+@REGISTER_BUS=hb
 # @XDC.FILE=nexysv.xdc
 # @XDC.FILE=arty.xdc
 #

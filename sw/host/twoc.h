@@ -1,20 +1,20 @@
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Filename: 	builddate.v
+// Filename: 	twoc.h
 //
 // Project:	ArrowZip, a demonstration of the Arrow MAX1000 FPGA board
 //
-// Purpose:	This file records the date of the last build.  Running "make"
-//		in the main directory will create this file.  The `define found
-//	within it then creates a version stamp that can be used to tell which
-//	configuration is within an FPGA and so forth.
+// Purpose:	Some various two's complement related C++ helper routines.
+//		Specifically, these help extract signed numbers from
+//	packed bitfields, while guaranteeing that the upper bits are properly
+//	sign extended (or not) as desired.
 //
 // Creator:	Dan Gisselquist, Ph.D.
 //		Gisselquist Technology, LLC
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Copyright (C) 2015-2018, Gisselquist Technology, LLC
+// Copyright (C) 2015,2018, Gisselquist Technology, LLC
 //
 // This program is free software (firmware): you can redistribute it and/or
 // modify it under the terms of  the GNU General Public License as published
@@ -38,5 +38,11 @@
 ////////////////////////////////////////////////////////////////////////////////
 //
 //
-`define DATESTAMP 32'h20180313
-`define BUILDTIME 32'h00044735
+#ifndef	TWOC_H
+#define	TWOC_H
+
+extern	long	sbits(const long val, const int bits);
+extern	unsigned long	ubits(const long val, const int bits);
+
+#endif
+

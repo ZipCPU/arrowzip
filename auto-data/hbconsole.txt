@@ -56,10 +56,11 @@
 @$BUS_ADDRESS_WIDTH=@$(MASTER.BUS.AWID)
 @MAIN.PORTLIST=
 		// UART/host to wishbone interface
-		i_uart_rx, o_uart_tx
+		i_uart_rx, o_uart_tx, o_hb_err
 @MAIN.IODECL=
 	input	wire		i_uart_rx;
 	output	wire		o_uart_tx;
+	output	wire		o_hb_err;
 @MAIN.PARAM=
 	//
 	//
@@ -121,12 +122,14 @@
 			@$(PREFIX)_tx_stb, @$(PREFIX)_tx_data, @$(PREFIX)_tx_busy,
 			//
 			w_console_tx_stb, w_console_tx_data, w_console_busy,
-			w_console_rx_stb, w_console_rx_data);
+			w_console_rx_stb, w_console_rx_data,
+			o_hb_err);
 	assign	@$(PREFIX)_addr= @$(PREFIX)_tmp_addr[(@$BUS_ADDRESS_WIDTH-1):0];
 @REGDEFS.H.DEFNS=
 #define	R_ZIPCTRL	@$.ZIP_ADDRESS
 #define	R_ZIPDATA	@$.ZIP_DBGDATA
 #define	RESET_ADDRESS	@$[0x%08x](RESET_ADDRESS)
+#define	BAUDRATE	@$[%d](BAUDRATE)
 @SIM.INCLUDE=
 #include "dbluartsim.h"
 @SIM.DEFNS=
@@ -135,7 +138,7 @@
 		m_@$(PREFIX) = new DBLUARTSIM();
 		m_@$(PREFIX)->setup(@$[%d](SETUP));
 @SIM.TICK=
-		m_core->i_@$(PREFIX)_uart_rx = (*m_@$(PREFIX))(m_core->o_@$(PREFIX)_uart_tx);
+		m_core->i_uart_rx = (*m_@$(PREFIX))(m_core->o_uart_tx);
 @SIM.CLOCK=clk
 #
 #
@@ -191,4 +194,4 @@ typedef struct  CONSOLE_S {
 @RTL.MAKE.GROUP= HBBUS
 @RTL.MAKE.SUBD= hexbus
 @RTL.MAKE.FILES= hbconsole.v hbdechex.v hbdeword.v hbexec.v hbgenhex.v
-	hbidle.v hbints.v hbnewline.v hbpack.v console.v
+	hbidle.v hbints.v hbnewline.v hbpack.v console.v hbcheckerr.v

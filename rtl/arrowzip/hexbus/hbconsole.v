@@ -37,13 +37,14 @@
 //
 `default_nettype	none
 //
-module	hbconsole(i_clk, i_rx_stb, i_rx_byte, 
+module	hbconsole(i_clk, i_rx_stb, i_rx_byte,
 		o_wb_cyc, o_wb_stb, o_wb_we, o_wb_addr, o_wb_data, o_wb_sel,
 		i_wb_ack, i_wb_stall, i_wb_err, i_wb_data,
 		i_interrupt,
 		o_tx_stb, o_tx_data, i_tx_busy,
 		i_console_stb, i_console_data, o_console_busy,
-		o_console_stb, o_console_data);
+		o_console_stb, o_console_data,
+		o_err);
 	parameter	LGWATCHDOG=19,
 			LGINPUT_FIFO=6,
 			LGOUTPUT_FIFO=10;
@@ -68,6 +69,7 @@ module	hbconsole(i_clk, i_rx_stb, i_rx_byte,
 	output	reg		o_console_stb;
 	output	reg	[6:0]	o_console_data;
 	//
+	output	reg		o_err;
 
 
 	always @(posedge i_clk)
@@ -76,7 +78,7 @@ module	hbconsole(i_clk, i_rx_stb, i_rx_byte,
 		o_console_data <= i_rx_byte[6:0];
 
 
-	wire	w_reset;	
+	wire	w_reset;
 
 	//
 	//
@@ -124,14 +126,29 @@ module	hbconsole(i_clk, i_rx_stb, i_rx_byte,
 			ow_stb,  ow_word,  int_busy,
 			int_stb, int_word, idl_busy);
 
-	// 
-	// 
-	// 
+	wire	int_err;
+	hbcheckerr #(34) intoverflow(i_clk, w_reset, ow_stb, ow_word, int_busy,
+				int_err);
+
+
+	//
+	//
+	//
 	wire		hb_busy, idl_stb;
 	wire	[33:0]	idl_word;
 	hbidle	addidles(i_clk, w_reset,
 			int_stb, int_word, idl_busy,
 			idl_stb, idl_word, hb_busy);
+
+	wire	idl_err;
+	hbcheckerr #(34) idloverflow(i_clk, w_reset, int_stb, int_word, idl_busy,
+				idl_err);
+
+	always @(posedge i_clk)
+	if (w_reset)
+		o_err <= 1'b0;
+	else
+		o_err <= (idl_err)||(int_err);
 
 	// We'll then take that ouput from that stage, and disassemble the
 	// response word into smaller (5-bit) sized units ...

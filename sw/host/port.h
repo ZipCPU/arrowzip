@@ -47,7 +47,7 @@
 // computer, test it, and when/if it doesn't work we can replace the device
 // with the test-bench.  Across the network, no one will know any better that
 // anything had changed.
-#define	FPGAHOST	"localhost"	// Whatever computer is used to run this
+#define	FPGAHOST	"jericho"	// Whatever computer is used to run this
 #define	FPGAPORT	6955		// A somewhat random port number--CHANGEME
 
 #define FPGAOPEN(V) V= new FPGA(new NETCOMMS(FPGAHOST, FPGAPORT))

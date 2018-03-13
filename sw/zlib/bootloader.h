@@ -1,20 +1,18 @@
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Filename: 	builddate.v
+// Filename:	bootloader.h
 //
 // Project:	ArrowZip, a demonstration of the Arrow MAX1000 FPGA board
 //
-// Purpose:	This file records the date of the last build.  Running "make"
-//		in the main directory will create this file.  The `define found
-//	within it then creates a version stamp that can be used to tell which
-//	configuration is within an FPGA and so forth.
+// Purpose:	
+//
 //
 // Creator:	Dan Gisselquist, Ph.D.
 //		Gisselquist Technology, LLC
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Copyright (C) 2015-2018, Gisselquist Technology, LLC
+// Copyright (C) 2015-2016,2018, Gisselquist Technology, LLC
 //
 // This program is free software (firmware): you can redistribute it and/or
 // modify it under the terms of  the GNU General Public License as published
@@ -38,5 +36,34 @@
 ////////////////////////////////////////////////////////////////////////////////
 //
 //
-`define DATESTAMP 32'h20180313
-`define BUILDTIME 32'h00044735
+#ifndef	BOOTLOADER_H
+#define	BOOTLOADER_H
+
+extern	int	_top_of_heap[1], _top_of_stack[1];
+extern	int	_boot_address[1];
+
+#ifdef	_BOARD_HAS_BKRAM
+#ifdef	_BOARD_HAS_SDRAM
+extern	int	_kernel_image_start[1], _kernel_image_end[1],
+#define	_BOARD_HAS_KERNEL_SPACE
+#endif
+#endif
+
+
+#ifndef	_BOARD_HAS_KERNEL_SPACE
+#ifndef	_ram
+
+#ifdef	_BOARD_HAS_BKRAM
+#define	_ram	_bkram
+#elif	defined(_BOARD_HAS_SDRAM)
+#define	_ram	_sdram
+#endif
+
+#endif	// _ram
+#endif	// _BOARD_HAS_KERNEL_SPACE
+
+
+extern	int	_ram_image_start[1], _ram_image_end[1],
+		_bss_image_end[1];
+
+#endif

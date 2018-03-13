@@ -66,22 +66,22 @@ module	helloworld(i_clk, o_uart_tx);
 	reg	[7:0]	message	[0:15];
 	
 	initial begin
-		message[ 0] <= "H";
-		message[ 1] <= "e";
-		message[ 2] <= "l";
-		message[ 3] <= "l";
-		message[ 4] <= "o";
-		message[ 5] <= ",";
-		message[ 6] <= " ";
-		message[ 7] <= "W";
-		message[ 8] <= "o";
-		message[ 9] <= "r";
-		message[10] <= "l";
-		message[11] <= "d";
-		message[12] <= "!";
-		message[13] <= " ";
-		message[14] <= "\r";
-		message[15] <= "\n";
+		message[ 0] = "H";
+		message[ 1] = "e";
+		message[ 2] = "l";
+		message[ 3] = "l";
+		message[ 4] = "o";
+		message[ 5] = ",";
+		message[ 6] = " ";
+		message[ 7] = "W";
+		message[ 8] = "o";
+		message[ 9] = "r";
+		message[10] = "l";
+		message[11] = "d";
+		message[12] = "!";
+		message[13] = " ";
+		message[14] = "\r";
+		message[15] = "\n";
 	end
 
 	reg	[27:0]	counter;
@@ -89,12 +89,10 @@ module	helloworld(i_clk, o_uart_tx);
 	always @(posedge i_clk)
 		counter <= counter + 1'b1;
 
-	wire		tx_break, tx_busy;
+	wire		tx_busy;
 	reg		tx_stb;
 	reg	[3:0]	tx_index;
 	reg	[7:0]	tx_data;
-
-	assign	tx_break = 1'b0;
 
 	initial	tx_index = 4'h0;
 	always @(posedge i_clk)

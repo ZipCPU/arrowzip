@@ -47,34 +47,14 @@ VDIRFB:= $(FBDIR)/obj_dir
 VERILATOR := verilator
 
 .PHONY: test
-test: $(VDIRFB)/Vtxuart__ALL.a
-test: $(VDIRFB)/Vrxuart__ALL.a
-test: $(VDIRFB)/Vwbuart__ALL.a
-test: $(VDIRFB)/Vtxuartlite__ALL.a
-test: $(VDIRFB)/Vrxuartlite__ALL.a
+test: $(VDIRFB)/Vhelloworld__ALL.a
 
-$(VDIRFB)/Vrxuart__ALL.a: $(VDIRFB)/Vrxuart.h $(VDIRFB)/Vrxuart.cpp
-$(VDIRFB)/Vrxuart__ALL.a: $(VDIRFB)/Vrxuart.mk
-$(VDIRFB)/Vrxuart.h $(VDIRFB)/Vrxuart.cpp $(VDIRFB)/Vrxuart.mk: rxuart.v
-
-$(VDIRFB)/Vrxuartlite__ALL.a: $(VDIRFB)/Vrxuartlite.h $(VDIRFB)/Vrxuartlite.cpp
-$(VDIRFB)/Vrxuartlite__ALL.a: $(VDIRFB)/Vrxuartlite.mk
-$(VDIRFB)/Vrxuartlite.h $(VDIRFB)/Vrxuartlite.cpp $(VDIRFB)/Vrxuartlite.mk: rxuartlite.v
-
-$(VDIRFB)/Vtxuart__ALL.a: $(VDIRFB)/Vtxuart.h $(VDIRFB)/Vtxuart.cpp
-$(VDIRFB)/Vtxuart__ALL.a: $(VDIRFB)/Vtxuart.mk
-$(VDIRFB)/Vtxuart.h $(VDIRFB)/Vtxuart.cpp $(VDIRFB)/Vtxuart.mk: txuart.v
-
-$(VDIRFB)/Vtxuartlite__ALL.a: $(VDIRFB)/Vtxuartlite.h $(VDIRFB)/Vtxuartlite.cpp
-$(VDIRFB)/Vtxuartlite__ALL.a: $(VDIRFB)/Vtxuartlite.mk
-$(VDIRFB)/Vtxuartlite.h $(VDIRFB)/Vtxuartlite.cpp $(VDIRFB)/Vtxuartlite.mk: txuartlite.v
-
-$(VDIRFB)/Vwbuart__ALL.a: $(VDIRFB)/Vwbuart.h $(VDIRFB)/Vwbuart.cpp
-$(VDIRFB)/Vwbuart__ALL.a: $(VDIRFB)/Vwbuart.mk
-$(VDIRFB)/Vwbuart.h $(VDIRFB)/Vwbuart.cpp $(VDIRFB)/Vwbuart.mk: wbuart.v ufifo.v txuart.v rxuart.v
-
-$(VDIRFB)/V%.cpp $(VDIRFB)/V%.h $(VDIRFB)/V%.mk: $(FBDIR)/%.v
-	$(VERILATOR) -Wall -cc $*.v
+$(VDIRFB)/Vhelloworld__ALL.a: $(VDIRFB)/Vhelloworld.h $(VDIRFB)/Vhelloworld.cpp
+$(VDIRFB)/Vhelloworld__ALL.a: $(VDIRFB)/Vhelloworld.mk
+$(VDIRFB)/Vhelloworld.h: $(VDIRFB)/Vhelloworld.cpp
+$(VDIRFB)/Vhelloworld.cpp: $(VDIRFB)/Vhelloworld.mk
+$(VDIRFB)/Vhelloworld.mk: helloworld.v ../common/txuartlite.v
+	$(VERILATOR) -Wall -y ../common -cc helloworld.v
 
 $(VDIRFB)/V%__ALL.a: $(VDIRFB)/V%.mk
 	cd $(VDIRFB); make -f V$*.mk

@@ -1,20 +1,26 @@
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Filename: 	builddate.v
+// Filename: 	umod.c
 //
 // Project:	ArrowZip, a demonstration of the Arrow MAX1000 FPGA board
 //
-// Purpose:	This file records the date of the last build.  Running "make"
-//		in the main directory will create this file.  The `define found
-//	within it then creates a version stamp that can be used to tell which
-//	configuration is within an FPGA and so forth.
+// Purpose:	This is a temporary file--a crutch if you will--until a similar
+//		capability is merged into GCC.  Right now, GCC has no way of
+//	taking the module of two 64-bit numbers, and this routine provides that
+//	capability.
+//
+//	This routine is required by and used by newlib's printf in order to
+//	print decimal numbers (%d) to an IO stream.
+//
+//	Once gcc is properly patched, this will be removed from the 
+//	repository.
 //
 // Creator:	Dan Gisselquist, Ph.D.
 //		Gisselquist Technology, LLC
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Copyright (C) 2015-2018, Gisselquist Technology, LLC
+// Copyright (C) 2017-2018, Gisselquist Technology, LLC
 //
 // This program is free software (firmware): you can redistribute it and/or
 // modify it under the terms of  the GNU General Public License as published
@@ -38,5 +44,19 @@
 ////////////////////////////////////////////////////////////////////////////////
 //
 //
-`define DATESTAMP 32'h20180313
-`define BUILDTIME 32'h00044735
+#include <stdint.h>
+
+
+unsigned long __udivdi3(unsigned long, unsigned long);
+
+__attribute((noinline))
+unsigned long __umoddi3(unsigned long a, unsigned long b) {
+	unsigned long	r;
+
+	// Return a modulo b, or a%b in C syntax
+	r = __udivdi3(a, b);
+	r = r * b;
+	r = a - r;
+	return r;
+}
+
