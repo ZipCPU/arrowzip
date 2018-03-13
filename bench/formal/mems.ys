@@ -1,4 +1,4 @@
-read_verilog -D MEMS -formal ../../rtl/mems.v
+read_verilog -D MEMS -formal ../../rtl/arrowzip/mems.v
 read_verilog -D MEMS -formal fwb_slave.v
 chparam -set SCKBITS 2 -set SPI_CLK_DIVIDER 2 mems
 prep -top mems -nordff

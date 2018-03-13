@@ -1,0 +1,5 @@
+read_verilog -D MEMS -formal ../../rtl/arrowzip/dualflexpress.v
+read_verilog -D MEMS -formal fwb_slave.v
+prep -top dualflexpress -nordff
+opt_merge -share_all
+write_smt2 -wires dualflexpress.smt2

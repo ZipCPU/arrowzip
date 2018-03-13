@@ -82,7 +82,7 @@
 //	Either way, no debugging output will be produced
 //
 // #define	DBGPRINTF	printf
-#define	DBGPRINTF	filedump
+// #define	DBGPRINTF	filedump
 //
 //
 #ifndef	DBGPRINTF
@@ -92,6 +92,8 @@
 #endif
 
 void	null(...) {}
+
+bool	gbl_last_readidle = true;
 
 #include <stdarg.h> // replaces the (defunct) varargs.h include file
 void	filedump(const char *fmt, ...) {
@@ -109,6 +111,7 @@ void	filedump(const char *fmt, ...) {
 	vfprintf(dbgfp, fmt, args);
 	va_end(args);
 	fflush(dbgfp);
+	gbl_last_readidle = false;
 
 	// If you want the debug output to go to stderr as well, you can
 	// uncomment the next couple of lines
@@ -461,8 +464,9 @@ HEXBUS::BUSW	HEXBUS::readword(void) {
 			m_isspace = false;
 			word = (word << 4) | ((m_buf[0] - 'a' + 10)&0x0f);
 		} else {
-			DBGPRINTF("RCVD OTHER-CHAR, m_cmd = %02x (%c)\n",
-				m_cmd & 0x0ff, isgraph(m_cmd)?m_cmd:'.');
+			DBGPRINTF("RCVD OTHER-CHAR(%c), m_cmd = %02x (%c), word=0x%08x\n",
+				isgraph(m_buf[0])?m_buf[0]:'.',
+				m_cmd & 0x0ff, isgraph(m_cmd)?m_cmd:'.', word);
 			if (m_isspace) {
 				// Ignore multiple spaces
 			} else if (m_cmd == HEXB_READ) {
@@ -481,13 +485,17 @@ HEXBUS::BUSW	HEXBUS::readword(void) {
 			} else if (m_cmd == HEXB_ERR) {
 				DBGPRINTF("Bus error(0x%08x)-readword\n",m_lastaddr);
 				m_bus_err = true;
+				m_isspace = isspace(m_buf[0]);
+				if (!m_isspace)
+					m_cmd = m_buf[0];
 				throw BUSERR(m_lastaddr);
 			} else if (m_cmd == HEXB_IDLE) {
-				DBGPRINTF("Bus error(0x%08x,ABORT)\n",
-					m_lastaddr);
 				abort_countdown--;
-				if (0 == abort_countdown)
+				if (0 == abort_countdown) {
+					DBGPRINTF("Bus error(0x%08x,ABORT)\n",
+						m_lastaddr);
 					throw BUSERR(0);
+				}
 			} else if (m_cmd == HEXB_ADDR) {
 				m_addr_set  = true;
 				m_inc       = (word & 1) ? 0:1;
@@ -527,7 +535,10 @@ HEXBUS::BUSW	HEXBUS::readword(void) {
 void	HEXBUS::readidle(void) {
 	unsigned	word;
 
-	DBGPRINTF("READ-IDLE()\n");
+	if (!gbl_last_readidle) {
+		DBGPRINTF("READ-IDLE()\n");
+		gbl_last_readidle = true;
+	}
 
 	// Start by clearing the register
 	word = 0;

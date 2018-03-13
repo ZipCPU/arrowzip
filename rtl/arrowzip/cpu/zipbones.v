@@ -64,7 +64,7 @@ module	zipbones(i_clk, i_reset,
 	parameter	RESET_ADDRESS=32'h0100000, ADDRESS_WIDTH=30,
 			LGICACHE=8;
 	parameter [0:0]	START_HALTED=0;
-	localparam	EXTERNAL_INTERRUPTS=1,
+	parameter	EXTERNAL_INTERRUPTS=1,
 `ifdef	OPT_MULTIPLY
 			IMPLEMENT_MPY = `OPT_MULTIPLY;
 `else

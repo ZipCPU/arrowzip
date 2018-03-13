@@ -51,13 +51,14 @@ module	console(i_clk, i_rst,
 		//
 		o_console_rx_int, o_console_tx_int,
 		o_console_rxfifo_int, o_console_txfifo_int);
-	parameter [3:0]	LGFLEN = 4;
+	parameter [3:0]	LGFLEN = 0;
 	parameter [0:0]	HARDWARE_FLOW_CONTROL_PRESENT = 1'b1;
 	// Perform a simple/quick bounds check on the log FIFO length, to make
 	// sure its within the bounds we can support with our current
 	// interface.
-	localparam [3:0]	LCLLGFLEN = (LGFLEN > 4'ha)? 4'ha
-					: ((LGFLEN < 4'h2) ? 4'h2 : LGFLEN);
+	localparam [3:0]	LCLLGFLEN = (LGFLEN == 0)  ? 0
+					: ((LGFLEN > 4'ha) ? 4'ha
+					: ((LGFLEN < 4'h2) ? 4'h2 : LGFLEN));
 	//
 	input	wire		i_clk, i_rst;
 	// Wishbone inputs
@@ -90,57 +91,92 @@ module	console(i_clk, i_rst,
 	// We place it into a receiver FIFO.
 	//
 	// Here's the declarations for the wires it needs.
-	reg		rx_console_reset;
 	wire		rx_empty_n, rx_fifo_err;
 	wire	[6:0]	rxf_wb_data;
 	wire	[15:0]	rxf_status;
-	reg		rxf_wb_read;
 	//
 	// And here's the FIFO proper.
 	//
-	// Note that the FIFO will be cleared upon any reset---basically any
-	// time a reset is requested via the wishbone or from i_rst.
-	//
-	// The FIFO accepts strobe and data from the receiver.
-	// We issue another wire to it (rxf_wb_read), true when we wish to read
-	// from the FIFO, and we get our data in rxf_wb_data.  The FIFO outputs
-	// four status-type values: 1) is it non-empty, 2) is the FIFO over half
-	// full, 3) a 16-bit status register, containing info regarding how full
-	// the FIFO truly is, and 4) an error indicator.
-	ufifo	#(.LGFLEN(LCLLGFLEN), .BW(7), .RXFIFO(1))
-		rxfifo(i_clk, (i_rst)||(rx_console_reset),
-			i_console_stb, i_console_data,
-			rx_empty_n,
-			rxf_wb_read, rxf_wb_data,
-			rxf_status, rx_fifo_err);
-	assign	o_console_rxfifo_int = rxf_status[1];
+	generate if (LCLLGFLEN > 0)
+	begin : RX_WFIFO
+		reg		rxf_wb_read;
+		reg		rx_console_reset;
+		// Note that the FIFO will be cleared upon any reset---basically
+		// any time a reset is requested via the wishbone or from i_rst.
+		//
+		// The FIFO accepts strobe and data from the receiver.
+		// We issue another wire to it (rxf_wb_read), true when we wish
+		// to read from the FIFO, and we get our data in rxf_wb_data.
+		// The FIFO outputs four status-type values: 1) is it non-empty,
+		// 2) is the FIFO over half full, 3) a 16-bit status register,
+		// containing info regarding how full the FIFO truly is, and
+		// 4) an error indicator.
+		ufifo	#(.LGFLEN(LCLLGFLEN), .BW(7), .RXFIFO(1))
+			rxfifo(i_clk, (i_rst)||(rx_console_reset),
+				i_console_stb, i_console_data,
+				rx_empty_n,
+				rxf_wb_read, rxf_wb_data,
+				rxf_status, rx_fifo_err);
+		assign	o_console_rxfifo_int = rxf_status[1];
 
-	// We produce four interrupts.  One of the receive interrupts indicates
-	// whether or not the receive FIFO is non-empty.  This should wake up
-	// the CPU.
-	assign	o_console_rx_int = rxf_status[0];
+		// We produce four interrupts.  One of the receive interrupts
+		// indicates whether or not the receive FIFO is non-empty.
+		// This should wake up the CPU.
+		assign	o_console_rx_int = rxf_status[0];
 
-	// If the bus requests that we read from the receive FIFO, we need to
-	// tell this to the receive FIFO.  Note that because we are using a 
-	// clock here, the output from the receive FIFO will necessarily be
-	// delayed by an extra clock.
-	initial	rxf_wb_read = 1'b0;
-	always @(posedge i_clk)
-		rxf_wb_read <= (i_wb_stb)&&(i_wb_addr[1:0]==`CONSOLE_RXREG)
-				&&(!i_wb_we);
+		// If the bus requests that we read from the receive FIFO, we
+		// need to tell this to the receive FIFO.  Note that because
+		// we are using a clock here, the output from the receive FIFO
+		// will necessarily be delayed by an extra clock.
+		initial	rxf_wb_read = 1'b0;
+		always @(posedge i_clk)
+			rxf_wb_read <= (i_wb_stb)
+					&&(i_wb_addr[1:0]==`CONSOLE_RXREG)
+					&&(!i_wb_we);
 
-	initial	rx_console_reset = 1'b1;
-	always @(posedge i_clk)
-		if ((i_rst)||((i_wb_stb)&&(i_wb_addr[1:0]==`CONSOLE_SETUP)&&(i_wb_we)))
-			// The receiver reset, always set on a master reset
-			// request.
-			rx_console_reset <= 1'b1;
-		else if ((i_wb_stb)&&(i_wb_addr[1:0]==`CONSOLE_RXREG)&&(i_wb_we))
-			// Writes to the receive register will command a receive
-			// reset anytime bit[12] is set.
-			rx_console_reset <= i_wb_data[12];
-		else
-			rx_console_reset <= 1'b0;
+		initial	rx_console_reset = 1'b1;
+		always @(posedge i_clk)
+			if ((i_rst)||((i_wb_stb)&&(i_wb_addr[1:0]==`CONSOLE_SETUP)&&(i_wb_we)))
+				// The receiver reset, always set on a master reset
+				// request.
+				rx_console_reset <= 1'b1;
+			else if ((i_wb_stb)&&(i_wb_addr[1:0]==`CONSOLE_RXREG)&&(i_wb_we))
+				// Writes to the receive register will command a receive
+				// reset anytime bit[12] is set.
+				rx_console_reset <= i_wb_data[12];
+			else
+				rx_console_reset <= 1'b0;
+	end else begin : RX_NOFIFO
+		reg	[6:0]	r_rx_fifo_data;
+		reg		r_rx_fifo_full;
+		reg		r_rx_fifo_err;
+
+		initial	r_rx_fifo_full = 1'b0;
+		always @(posedge i_clk)
+		if (i_console_stb)
+			r_rx_fifo_full <= 1'b1;
+		else if ((i_wb_stb)&&(i_wb_addr[1:0]==`CONSOLE_RXREG)
+					&&(!i_wb_we))
+			r_rx_fifo_full <= 1'b0;
+
+		always @(posedge i_clk)
+		if (i_console_stb)
+			r_rx_fifo_data <= i_console_data;
+
+		always @(posedge i_clk)
+		if ((r_rx_fifo_full)&&(i_console_stb))
+			r_rx_fifo_err <= 1'b1;
+		else if ((i_wb_stb)&&(i_wb_addr[1:0]==`CONSOLE_RXREG))
+			r_rx_fifo_err <= 1'b0;
+
+		assign	rx_fifo_err = r_rx_fifo_err;
+		assign	rx_empty_n  = r_rx_fifo_full;
+		assign	rxf_wb_data  = r_rx_fifo_data;
+
+		assign	o_console_rx_int     = rx_empty_n;
+		assign	o_console_rxfifo_int = rx_empty_n;
+		assign	rxf_status = { 13'h0, {(3){rx_empty_n} } };
+	end endgenerate
 
 	// Finally, we'll construct a 32-bit value from these various wires,
 	// to be returned over the bus on any read.  These include the data
@@ -162,66 +198,107 @@ module	console(i_clk, i_rst,
 	/////////////////////////////////////////
 	wire		tx_empty_n, txf_err;
 	wire	[15:0]	txf_status;
-	reg		txf_wb_write, tx_console_reset;
+	reg		txf_wb_write;
 	reg	[6:0]	txf_wb_data;
 
-	// Unlike the receiver which goes from RXCONSOLE -> UFIFO -> WB, the
-	// transmitter basically goes WB -> UFIFO -> TXCONSOLE.  Hence, to build
-	// support for the transmitter, we start with the command to write data
-	// into the FIFO.  In this case, we use the act of writing to the 
-	// CONSOLE_TXREG address as our indication that we wish to write to the 
-	// FIFO.  Here, we create a write command line, and latch the data for
-	// the extra clock that it'll take so that the command and data can be
-	// both true on the same clock.
-	initial	txf_wb_write = 1'b0;
-	always @(posedge i_clk)
-	begin
-		txf_wb_write <= (i_wb_stb)&&(i_wb_addr == `CONSOLE_TXREG)
-					&&(i_wb_we);
-		txf_wb_data  <= i_wb_data[6:0];
-	end
+	generate if (LCLLGFLEN > 0)
+	begin : TX_WFIFO
+		reg		tx_console_reset;
+		// Unlike the receiver which goes from RXCONSOLE -> UFIFO -> WB,
+		// the transmitter basically goes WB -> UFIFO -> TXCONSOLE.
+		// Hence, to build support for the transmitter, we start with
+		// the command to write data into the FIFO.  In this case, we
+		// use the act of writing to the CONSOLE_TXREG address as our
+		// indication that we wish to write to the FIFO.  Here, we
+		// create a write command line, and latch the data for the
+		// extra clock that it'll take so that the command and data can
+		// be both true on the same clock.
+		initial	txf_wb_write = 1'b0;
+		always @(posedge i_clk)
+		begin
+			txf_wb_write <= (i_wb_stb)&&(i_wb_addr == `CONSOLE_TXREG)
+						&&(i_wb_we);
+			txf_wb_data  <= i_wb_data[6:0];
+		end
 
-	// Transmit FIFO
-	//
-	// Most of this is just wire management.  The TX FIFO is identical in
-	// implementation to the RX FIFO (theyre both UFIFOs), but the TX
-	// FIFO is fed from the WB and read by the transmitter.  Some key
-	// differences to note: we reset the transmitter on any request for a
-	// break.  We read from the FIFO any time the CONSOLE transmitter is
-	// idle and ... we just set the values (above) for controlling writing
-	// into this.
-	ufifo	#(.LGFLEN(LGFLEN), .BW(7), .RXFIFO(0))
-		txfifo(i_clk, (tx_console_reset),
-			txf_wb_write, txf_wb_data,
-			tx_empty_n,
-			(!i_console_busy)&&(tx_empty_n), o_console_data,
-			txf_status, txf_err);
+		// Transmit FIFO
+		//
+		// Most of this is just wire management.  The TX FIFO is
+		// identical in implementation to the RX FIFO (theyre both
+		// UFIFOs), but the TX FIFO is fed from the WB and read by the
+		// transmitter.  Some key differences to note: we reset the
+		// transmitter on any request for a break.  We read from the
+		// FIFO any time the CONSOLE transmitter is idle and ... we
+		// just set the values (above) for controlling writing into
+		// this.
+		ufifo	#(.LGFLEN(LGFLEN), .BW(7), .RXFIFO(0))
+			txfifo(i_clk, (tx_console_reset),
+				txf_wb_write, txf_wb_data,
+				tx_empty_n,
+				(!i_console_busy)&&(tx_empty_n), o_console_data,
+				txf_status, txf_err);
 
-	assign	o_console_stb = tx_empty_n;
+		assign	o_console_stb = tx_empty_n;
 
-	// Let's create two transmit based interrupts from the FIFO for the CPU.
-	//	The first will be true any time the FIFO has at least one open
-	//	position within it.
-	assign	o_console_tx_int = txf_status[0];
-	//	The second will be true any time the FIFO is less than half
-	//	full, allowing us a change to always keep it (near) fully 
-	//	charged.
-	assign	o_console_txfifo_int = txf_status[1];
+		// Let's create two transmit based interrupts from the FIFO for
+		// the CPU. The first will be true any time the FIFO has at
+		// least one open position within it.
+		assign	o_console_tx_int = txf_status[0];
+		// The second will be true any time the FIFO is less than half
+		// full, allowing us a change to always keep it (near) fully 
+		// charged.
+		assign	o_console_txfifo_int = txf_status[1];
 
-	// TX-Reset logic
-	//
-	// This is nearly identical to the RX reset logic above.  Basically,
-	// any time someone writes to bit [12] the transmitter will go through
-	// a reset cycle.  Keep bit [12] low, and everything will proceed as
-	// normal.
-	initial	tx_console_reset = 1'b1;
-	always @(posedge i_clk)
-		if((i_rst)||((i_wb_stb)&&(i_wb_addr == `CONSOLE_SETUP)&&(i_wb_we)))
-			tx_console_reset <= 1'b1;
-		else if ((i_wb_stb)&&(i_wb_addr[1:0]==`CONSOLE_TXREG)&&(i_wb_we))
-			tx_console_reset <= i_wb_data[12];
-		else
-			tx_console_reset <= 1'b0;
+		// TX-Reset logic
+		//
+		// This is nearly identical to the RX reset logic above.
+		// Basically, any time someone writes to bit [12] the
+		// transmitter will go through a reset cycle.  Keep bit [12]
+		// low, and everything will proceed as normal.
+		initial	tx_console_reset = 1'b1;
+		always @(posedge i_clk)
+			if((i_rst)||((i_wb_stb)&&(i_wb_addr == `CONSOLE_SETUP)&&(i_wb_we)))
+				tx_console_reset <= 1'b1;
+			else if ((i_wb_stb)&&(i_wb_addr[1:0]==`CONSOLE_TXREG)&&(i_wb_we))
+				tx_console_reset <= i_wb_data[12];
+			else
+				tx_console_reset <= 1'b0;
+	end else begin : TX_NOFIFO
+		reg	[6:0]	r_txf_wb_data;
+		reg		r_txf_err, r_txf_wb_write;
+
+		initial	r_txf_wb_write = 1'b0;
+		always @(posedge i_clk)
+		begin
+			if((i_wb_stb)&&(i_wb_we)&&(i_wb_addr == `CONSOLE_TXREG))
+				r_txf_wb_write <= 1'b1;
+			else if (!i_console_busy)
+				r_txf_wb_write <= 1'b0;
+
+			if((i_wb_stb)&&(i_wb_we)&&(i_wb_addr == `CONSOLE_TXREG))
+				r_txf_wb_data  <= i_wb_data[6:0];
+		end
+
+		initial	r_txf_err = 1'b0;
+		always @(posedge i_clk)
+			if((i_rst)||((i_wb_stb)&&(i_wb_addr == `CONSOLE_SETUP)&&(i_wb_we)))
+				r_txf_err <= 1'b0;
+			else if ((i_wb_stb)&&(i_wb_addr[1:0]==`CONSOLE_TXREG)&&(i_wb_we)&&(i_wb_data[12]))
+				r_txf_err <= 1'b0;
+			else if((i_wb_stb)&&(i_wb_we)&&(i_wb_addr == `CONSOLE_TXREG)
+				&&(txf_wb_write)&&(i_console_busy))
+				r_txf_err <= 1'b1;
+
+		assign	txf_wb_write = r_txf_wb_write;
+		assign	txf_wb_data  = r_txf_wb_data;
+		assign	txf_err = r_txf_err;
+		assign	o_console_txfifo_int = !txf_wb_write;
+		assign	o_console_tx_int     = !txf_wb_write;
+		assign	o_console_stb  = txf_wb_write;
+		assign	o_console_data = txf_wb_data;
+		assign	tx_empty_n     = o_console_stb;
+		assign	txf_status     = { 13'h0, {(3){txf_wb_write}} };
+	end endgenerate
 
 	// Now that we are done with the chain, pick some wires for the user
 	// to read on any read of the transmit port.

@@ -359,10 +359,10 @@ int main(int argc, char **argv) {
 			m_fpga->writeio(R_ZIPDATA, 0);
 		}
 
-		m_fpga->writeio(R_ZIPCTRL, CPU_HALT|CPU_CLRCACHE);
 		printf("Setting PC to %08x\n", entry);
 		m_fpga->writeio(R_ZIPCTRL, CPU_HALT|CPU_sPC);
 		m_fpga->writeio(R_ZIPDATA, entry);
+		m_fpga->writeio(R_ZIPCTRL, CPU_HALT|CPU_CLRCACHE);
 
 		if (start_when_finished) {
 			printf("Starting the CPU\n");

@@ -188,6 +188,7 @@ module	busdelay(i_clk, i_reset,
 `ifdef	FORMAL
 		assign	f_wpending = { r_stb, r_we, r_addr, r_data, r_sel };
 `endif
+
 	end else begin
 
 		initial	o_dly_cyc   = 1'b0;

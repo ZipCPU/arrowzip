@@ -44,13 +44,13 @@ all:	check-install archive datestamp rtl sim sw
 BENCH := # `find bench -name Makefile` `find bench -name "*.cpp"` `find bench -name "*.h"`
 SIM   := `find sim -name Makefile` `find sim -name "*.cpp"` `find sim -name "*.h"` `find sim -name "*.c"`
 RTL   := `find rtl -name "*.v"` `find rtl -name Makefile`
-NOTES := `find . -name "*.txt"` `find . -name "*.html"`
+NOTES := `find . -name "*.md"` `find . -name "*.html"`
 SW    := `find sw -name "*.cpp"` `find sw -name "*.c"`	\
 	`find sw -name "*.h"`	`find sw -name "*.sh"`	\
 	`find sw -name "*.py"`	`find sw -name "*.pl"`	\
 	`find sw -name "*.png"`	`find sw -name Makefile`
-DEVSW := `find $(ZIPSW) -name "*.cpp"` `find $(ZIPSW) -name "*.h"` \
-	`find $(ZIPSW) -name Makefile`
+DEVSW := `find sw/board -name "*.cpp"` `find sw/board -name "*.h"` \
+	`find sw/board -name Makefile`
 PROJ  :=
 BIN  := # `find xilinx -name "*.bit"`
 AUTODATA := `find auto-data -name "*.txt"`
@@ -137,7 +137,7 @@ autodata: check-autofpga
 # simulation class library that we can then use for simulation
 #
 .PHONY: verilated
-verilated: datestamp check-verilator
+verilated: autodata datestamp check-verilator
 	+@$(SUBMAKE) rtl/simple
 	+@$(SUBMAKE) $(SOCDIR)
 
@@ -164,7 +164,7 @@ sw: sw-host sw-zlib sw-board
 # Build the hardware specific newlib library
 #
 .PHONY: sw-zlib
-sw-zlib: check-zip-gcc
+sw-zlib: autodata rtl check-zip-gcc
 	+@$(SUBMAKE) sw/zlib
 
 #
@@ -172,7 +172,7 @@ sw-zlib: check-zip-gcc
 # Build the board software.  This may (or may not) use the software library
 #
 .PHONY: sw-board
-sw-board: sw-zlib check-zip-gcc
+sw-board: autodata rtl sw-zlib check-zip-gcc
 	+@$(SUBMAKE) $(ZIPSW)
 
 #
@@ -180,7 +180,7 @@ sw-board: sw-zlib check-zip-gcc
 # Build the host support software
 #
 .PHONY: sw-host
-sw-host: check-gpp
+sw-host: autodata rtl check-gpp
 	+@$(SUBMAKE) sw/host
 
 #
@@ -190,6 +190,10 @@ sw-host: check-gpp
 .PHONY: hello
 hello: sim sw
 	$(SIMDIR)/main_tb $(ZIPSW)/hello
+
+.PHONY: cputest
+cputest: sim sw
+	$(SIMDIR)/main_tb $(ZIPSW)/cputest
 
 # .PHONY: test
 # test: hello

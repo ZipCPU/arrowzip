@@ -5,3 +5,4 @@ genpll_bb.v
 greybox_tmp
 obj_dir
 wbubus
+.qsys_edit

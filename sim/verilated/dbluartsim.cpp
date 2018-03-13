@@ -294,6 +294,8 @@ void	DBLUARTSIM::received(const char ch) {
 		int	snt = 0;
 		if (m_cmd >= 0)
 			snt = send(m_cmd,m_cmdbuf, m_cmdpos, 0);
+		else
+			snt = m_cmdpos;
 		if (snt < 0) {
 			printf("Closing CMD socket\n");
 			close(m_cmd);
@@ -309,7 +311,7 @@ void	DBLUARTSIM::received(const char ch) {
 		m_cmdpos = 0;
 	}
 
-	if (m_con >= 0) {
+	if ((m_con >= 0)&&(m_conpos > 0)) {
 		int	snt = 0;
 		snt = send(m_con, &m_conbuf[m_conpos-1], 1, 0);
 		if (snt < 0) {
@@ -319,7 +321,7 @@ void	DBLUARTSIM::received(const char ch) {
 			snt = 0;
 		} if (snt < 1) {
 			fprintf(stderr, "CON: no bytes sent!\n");
-		}
+		} m_conpos = 0;
 	} if ((m_conpos>0)&&((m_conbuf[m_conpos-1] == '\n')
 				||(m_conpos >= DBLPIPEBUFLEN-2))) {
 		m_conbuf[m_conpos] = '\0';

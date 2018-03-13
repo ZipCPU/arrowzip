@@ -1168,9 +1168,6 @@ void	test_fails(int start_time, int *listno) {
 
 	MARKSTOP;
 	save_context(context);
-	*listno++ = context[1];
-	*listno++ = context[14];
-	*listno++ = context[15];
 #ifdef	HAVE_COUNTER
 	*listno   = stop_time;
 #endif
@@ -1260,7 +1257,7 @@ void entry(void) {
 	// Check whether or not this CPU correctly identifies SIM instructions
 	// as illegal instructions
 	testid("SIM Instructions"); MARKSTART;
-	cc_fail = CC_MMUERR|CC_FPUERR|CC_DIVERR|CC_BUSERR|CC_TRAP|CC_STEP|CC_SLEEP;
+	cc_fail = CC_MMUERR|CC_FPUERR|CC_DIVERR|CC_BUSERR|CC_STEP|CC_SLEEP;
 	if ((run_test(sim_test, user_stack_ptr))||(zip_ucc()&cc_fail))
 		test_fails(start_time, &testlist[tnum]);
 	else if (zip_ucc() & CC_ILL) {
@@ -1443,17 +1440,21 @@ void entry(void) {
 		test_fails(start_time, &testlist[tnum]);
 	txstr("Pass\r\n"); testlist[tnum++] = 0;	// #21
 
-	// MPY_TEST
-	testid("Multiply test"); MARKSTART;
-	if ((run_test(mpy_test, user_stack_ptr))||(zip_ucc()&CC_EXCEPTION))
-		test_fails(start_time, &testlist[tnum]);
-	txstr("Pass\r\n"); testlist[tnum++] = 0;	// #22
+	if ((zip_cc() & 0x40000000)==0) {
+		txstr("No multiply unit installed\r\n");
+	} else {
+		// MPY_TEST
+		testid("Multiply test"); MARKSTART;
+		if ((run_test(mpy_test, user_stack_ptr))||(zip_ucc()&CC_EXCEPTION))
+			test_fails(start_time, &testlist[tnum]);
+		txstr("Pass\r\n"); testlist[tnum++] = 0;	// #22
 
-	// MPYxHI_TEST
-	testid("Multiply HI-word test"); MARKSTART;
-	if ((run_test(mpyhi_test, user_stack_ptr))||(zip_ucc()&CC_EXCEPTION))
-		test_fails(start_time, &testlist[tnum]);
-	txstr("Pass\r\n"); testlist[tnum++] = 0;	// #23
+		// MPYxHI_TEST
+		testid("Multiply HI-word test"); MARKSTART;
+		if ((run_test(mpyhi_test, user_stack_ptr))||(zip_ucc()&CC_EXCEPTION))
+			test_fails(start_time, &testlist[tnum]);
+		txstr("Pass\r\n"); testlist[tnum++] = 0;	// #23
+	}
 
 	// DIV_TEST
 	testid("Divide test");
@@ -1468,6 +1469,8 @@ void entry(void) {
 	txstr("\r\n");
 	txstr("-----------------------------------\r\n");
 	txstr("All tests passed.  Halting CPU.\r\n");
+	wait_for_uart_idle();
+	txstr("\r\n");
 	wait_for_uart_idle();
 	for(int k=0; k<50000; k++)
 		asm("NOOP");

@@ -326,20 +326,28 @@ module	main(i_clk, i_reset,
 	//
 	
 	assign	      buserr_sel = ((wb_sio_sel)&&(wb_addr[ 2: 0] ==  3'h0));
+ // 0x0000
 	assign	      buspic_sel = ((wb_sio_sel)&&(wb_addr[ 2: 0] ==  3'h1));
+ // 0x0004
 	assign	    pwrcount_sel = ((wb_sio_sel)&&(wb_addr[ 2: 0] ==  3'h2));
+ // 0x0008
 	assign	        spio_sel = ((wb_sio_sel)&&(wb_addr[ 2: 0] ==  3'h3));
+ // 0x000c
 	assign	     version_sel = ((wb_sio_sel)&&(wb_addr[ 2: 0] ==  3'h4));
+ // 0x0010
 	assign	    bustimer_sel = ((wb_dio_sel)&&((wb_addr[ 4: 3] &  2'h3) ==  2'h0));
+ // 0x0000
 	assign	    watchdog_sel = ((wb_dio_sel)&&((wb_addr[ 4: 3] &  2'h3) ==  2'h1));
+ // 0x0020
 	assign	         rtc_sel = ((wb_dio_sel)&&((wb_addr[ 4: 3] &  2'h3) ==  2'h2));
-	assign	    zipscope_sel = ((wb_addr[13:10] &  4'hf) ==  4'h1);
-	assign	     console_sel = ((wb_addr[13:10] &  4'hf) ==  4'h2);
-	assign	      wb_sio_sel = ((wb_addr[13:10] &  4'hf) ==  4'h3);
+ // 0x0040 - 0x005f
+	assign	    zipscope_sel = ((wb_addr[13:10] &  4'hf) ==  4'h1); // 0x1000 - 0x1007
+	assign	     console_sel = ((wb_addr[13:10] &  4'hf) ==  4'h2); // 0x2000 - 0x200f
+	assign	      wb_sio_sel = ((wb_addr[13:10] &  4'hf) ==  4'h3); // 0x3000 - 0x301f
 //x2	Was a master bus as well
-	assign	      wb_dio_sel = ((wb_addr[13:10] &  4'hf) ==  4'h4);
+	assign	      wb_dio_sel = ((wb_addr[13:10] &  4'hf) ==  4'h4); // 0x4000 - 0x407f
 //x2	Was a master bus as well
-	assign	       bkram_sel = ((wb_addr[13:10] &  4'h8) ==  4'h8);
+	assign	       bkram_sel = ((wb_addr[13:10] &  4'h8) ==  4'h8); // 0x8000 - 0xffff
 	//
 
 	//
@@ -365,9 +373,9 @@ module	main(i_clk, i_reset,
 	//
 	//
 	
-	assign	      hb_dwb_sel = ((hb_addr[14:14] &  1'h1) ==  1'h0);
+	assign	      hb_dwb_sel = ((hb_addr[14:14] &  1'h1) ==  1'h0); // 0x0000 - 0xffff
 //x2	Was a master bus as well
-	assign	     zip_dbg_sel = ((hb_addr[14:14] &  1'h1) ==  1'h1);
+	assign	     zip_dbg_sel = ((hb_addr[14:14] &  1'h1) ==  1'h1); // 0x10000 - 0x10007
 	//
 
 	//
