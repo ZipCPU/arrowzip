@@ -52,10 +52,12 @@
 #include <assert.h>
 #include <errno.h>
 
-
 #include "port.h"
 #include "regdefs.h"
 
+#ifndef	BAUDRATE
+#define	BAUDRATE	115200
+#endif
 
 #define	NO_WAITING	0
 #define	FOREVER		-1

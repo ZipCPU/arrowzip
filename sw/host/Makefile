@@ -38,7 +38,6 @@
 ##
 .PHONY: all
 PROGRAMS := wbregs netuart zipload zipstate zipdbg
-# zipstate zipdbg
 SCOPES :=
 all: $(PROGRAMS) $(SCOPES)
 CXX := g++
@@ -66,7 +65,7 @@ $(OBJDIR)/%.o: %.c
 clean:
 	rm -rf $(OBJDIR)/ $(PROGRAMS) a.out
 
-# $(OBJDIR)/dumpflash.o:   dumpflash.cpp regdefs.h
+$(OBJDIR)/scopecls.o: scopecls.cpp scopecls.h
 
 netuart: $(OBJDIR)/netuart.o
 	$(CXX) $(CFLAGS) $^ -o $@
@@ -77,13 +76,10 @@ zipstate: $(OBJDIR)/zipstate.o $(BUSOBJS)
 	$(CXX) $(CFLAGS) $^ $(LIBS) -o $@
 wbregs: $(OBJDIR)/wbregs.o $(BUSOBJS)
 	$(CXX) $(CFLAGS) $^ $(LIBS) -o $@
-# dumpflash: $(OBJDIR)/dumpflash.o $(BUSOBJS)
-#	$(CXX) $(CFLAGS) $^ $(LIBS) -o $@
 
 #
 # Programs that depend upon not just the bus objects, but the flash driver
 # as well.
-# zipload: $(OBJDIR)/zipload.o $(OBJDIR)/flashdrvr.o $(BUSOBJS) $(OBJDIR)/zipelf.o
 zipload: $(OBJDIR)/zipload.o $(BUSOBJS) $(OBJDIR)/zipelf.o
 	$(CXX) -g $^ -lelf -o $@
 

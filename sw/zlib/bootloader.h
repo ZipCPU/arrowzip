@@ -12,7 +12,7 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Copyright (C) 2015-2016,2018, Gisselquist Technology, LLC
+// Copyright (C) 2015-2019, Gisselquist Technology, LLC
 //
 // This program is free software (firmware): you can redistribute it and/or
 // modify it under the terms of  the GNU General Public License as published
@@ -42,28 +42,11 @@
 extern	int	_top_of_heap[1], _top_of_stack[1];
 extern	int	_boot_address[1];
 
-#ifdef	_BOARD_HAS_BKRAM
-#ifdef	_BOARD_HAS_SDRAM
-extern	int	_kernel_image_start[1], _kernel_image_end[1],
-#define	_BOARD_HAS_KERNEL_SPACE
-#endif
-#endif
+extern	int	_ram[1], _rom[1], _kram[1];
 
-
-#ifndef	_BOARD_HAS_KERNEL_SPACE
-#ifndef	_ram
-
-#ifdef	_BOARD_HAS_BKRAM
-#define	_ram	_bkram
-#elif	defined(_BOARD_HAS_SDRAM)
-#define	_ram	_sdram
-#endif
-
-#endif	// _ram
-#endif	// _BOARD_HAS_KERNEL_SPACE
-
-
-extern	int	_ram_image_start[1], _ram_image_end[1],
+extern	int	_boot_address[1],
+		_kram_start[1], _kram_end[1],
+		_ram_image_start[1], _ram_image_end[1],
 		_bss_image_end[1];
 
 #endif

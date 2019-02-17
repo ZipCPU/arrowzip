@@ -1,6 +1,6 @@
 ################################################################################
 ##
-## Filename: 	zipmaster.txt
+## Filename: 	zipbones.txt
 ##
 ## Project:	ArrowZip, a demonstration of the Arrow MAX1000 FPGA board
 ##
@@ -14,7 +14,7 @@
 ##
 ################################################################################
 ##
-## Copyright (C) 2017, Gisselquist Technology, LLC
+## Copyright (C) 2017-2018, Gisselquist Technology, LLC
 ##
 ## This program is free software (firmware): you can redistribute it and/or
 ## modify it under the terms of  the GNU General Public License as published
@@ -84,7 +84,7 @@
 	//
 	//
 	zipbones #(RESET_ADDRESS,ZIP_ADDRESS_WIDTH,10,ZIP_START_HALTED)
-		swic(i_clk, cpu_reset,
+		swic(i_clk, (cpu_reset)||(i_reset),
 			// Zippys wishbone interface
 			zip_cyc, zip_stb, zip_we, zip_addr, zip_data, zip_sel,
 					zip_ack, zip_stall, zip_idata, zip_err,
@@ -330,7 +330,8 @@
 #
 @RTL.MAKE.GROUP=ZIPCPU
 @RTL.MAKE.FILES= zipcpu.v cpuops.v dblfetch.v memops.v idecode.v ziptimer.v
-		wbpriarbiter.v zipbones.v busdelay.v cpudefs.v icontrol.v
+		wbpriarbiter.v zipbones.v busdelay.v cpudefs.v icontrol.v div.v
+		wbdblpriarb.v
 @RTL.MAKE.SUBD= cpu
 #
 #
@@ -344,8 +345,8 @@
 @REGS.NOTE= // The bus timer
 @REGS.N=1
 @REGS.0= 0 R_@$(DEVID) @$(DEVID)
-@INT.TMC.WIRE= @$(PREFIX)_int
-@INT.TMC.PIC= buspic
+@INT.BUSTIMER.WIRE= @$(PREFIX)_int
+@INT.BUSTIMER.PIC= buspic
 @MAIN.INSERT=
 	ziptimer
 		@$(PREFIX)i(i_clk, i_reset, 1'b1,

@@ -15,7 +15,7 @@
 ##
 ################################################################################
 ##
-## Copyright (C) 2015-2018, Gisselquist Technology, LLC
+## Copyright (C) 2015-2019, Gisselquist Technology, LLC
 ##
 ## This program is free software (firmware): you can redistribute it and/or
 ## modify it under the terms of  the GNU General Public License as published
@@ -45,14 +45,18 @@ all:
 CXX	:= g++
 OBJDIR	:= obj-pc
 RTLD	:= ../../rtl/arrowzip
-VOBJDR	:= $(RTLD)/obj_dir
+VOBJDR	:= $(RTLD)/obj_dirifneq ($(VERILATOR_ROOT),)
+VERILATOR:=$(VERILATOR_ROOT)/bin/verilator
+else
 VERILATOR_ROOT ?= $(shell bash -c 'verilator -V|grep VERILATOR_ROOT | head -1 | sed -e " s/^.*=\s*//"')
+endif
+export	$(VERILATOR)
 VROOT	:= $(VERILATOR_ROOT)
 VDEFS   := $(shell ./vversion.sh)
 VINCD   := $(VROOT)/include
 VINC	:= -I$(VINCD) -I$(VINCD)/vltstd -I$(VOBJDR)
-INCS	:= -I../../sw/host -I$(RTLD) $(VINC)
-CFLAGS	:= -Og -g -Wall $(INCS)
+INCS	:= -I. -I../../sw/host -I$(RTLD) $(VINC)
+CFLAGS	:= -Og -g -Wall $(INCS) $(VDEFS)
 #
 # A list of our sources and headers
 #
@@ -78,16 +82,15 @@ $(OBJDIR)/%.o: $(VINCD)/%.cpp
 	$(mk-objdir)
 	$(CXX) $(CFLAGS) $(INCS) -c $< -o $@
 
+$(OBJDIR)/main_tb.o: automaster_tb.cpp
+	$(CXX) $(CFLAGS) $(INCS) -c $< -o $@
 
+VMAIN := $(VOBJDR)/Vmain__ALL.a
 MAINOBJS := $(OBJDIR)/main_tb.o $(OBJDIR)/automaster_tb.o
-main_tb: $(MAINOBJS) $(SIMOBJECTS) $(VOBJS) $(VOBJDR)/Vmain__ALL.a
-	$(CXX) $(INCS) $(VDEFS) $^ $(VOBJDR)/Vmain__ALL.a -lelf -o $@
+main_tb: $(MAINOBJS) $(SIMOBJECTS) $(VOBJS) $(VMAIN)
+	$(CXX) $(VDEFS) $(CFLAGS) $^ $(VOBJDR)/Vmain__ALL.a -lelf -o $@
 
 #
-# Build a 64M SD-card image file that we can use for testing
-sdcard.img:
-	dd if=/dev/zero of=$@ bs=512 count=131072
-	mkfs.fat $@
 #
 # The "test" target, running hello world
 #
@@ -111,7 +114,7 @@ clean:
 define build-depends
 	$(mk-objdir)
 	@echo "Building dependency file"
-	@$(CXX) $(CFLAGS) $(INCS) -MM $(SOURCES) > $(OBJDIR)/xdepends.txt
+	@$(CXX) $(VDEFS) $(CFLAGS) $(INCS) -MM $(SOURCES) > $(OBJDIR)/xdepends.txt
 	@sed -e 's/^.*.o: /$(OBJDIR)\/&/' < $(OBJDIR)/xdepends.txt > $(OBJDIR)/depends.txt
 	@rm $(OBJDIR)/xdepends.txt
 endef
@@ -136,4 +139,6 @@ tags:	$(SOURCES) $(HEADERS)
 	@ctags $(SOURCES) $(HEADERS)
 
 
+ifneq ($(MAKECMDGOALS),clean)
 -include $(OBJDIR)/depends.txt
+endif

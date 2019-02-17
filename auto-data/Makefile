@@ -14,7 +14,7 @@
 ##
 ################################################################################
 ##
-## Copyright (C) 2018, Gisselquist Technology, LLC
+## Copyright (C) 2017-2019, Gisselquist Technology, LLC
 ##
 ## This program is free software (firmware): you can redistribute it and/or
 ## modify it under the terms of  the GNU General Public License as published
@@ -47,22 +47,24 @@ all:	data
 # of parts and pieces of our project that autofpga will copy/paste into our
 # main project files.
 #
-DATA := global.txt bkram.txt buserr.txt clock.txt zipscope.txt		\
-	rtclight.txt						\
-	pic.txt pwrcount.txt spio.txt				\
-	version.txt hbconsole.txt zipbones.txt dlyarbiter.txt
+BASE    := global.txt dlyarbiter.txt
+AUX     := version.txt buserr.txt pic.txt pwrcount.txt
+IO      := spio.txt # gpio.txt
+RTC     := rtclight.txt # rtcdate.txt
+DBGBUS  := hbconsole.txt
+MEMORY  := bkram.txt flexpress.txt # sdram.txt # wbhyperram.txt
+CPU     := zipbones.txt
+SCOPES  := # flashscope.txt cpuscope.txt
+LDSCRIPT:= mem_flash_bkram.txt mem_bkram_only.txt # mem_sdram_bkram.txt
+DATA := clock.txt $(BASE) $(AUX) $(IO) $(RTC)			\
+	$(DBGBUS) $(MEMORY) $(CPU) $(SCOPES) $(LDSCRIPT)
 
-# memsdev.txt sdram.txt zipbones.txt passthru.txt flexpress.txt
-
-AUTOFPGA := ../../../autofpga/trunk/sw/autofpga
+AUTOFPGA := autofpga
+$(AUTOFPGA):
 
 .PHONY: data
 data: $(AUTOFPGA) $(DATA)
 	$(AUTOFPGA) -d -o . $(DATA)
-
-define	notify-on-change
-	@bash -c 'cmp $(1) $(2)/$(1); if [[ $$? != 0 ]]; then echo "Files $(1) and $(2)/$(1) differ"; fi'
-endef
 
 clean:
 	rm -f toplevel.v main.v regdefs.h regdefs.cpp board.h board.ld

@@ -35,20 +35,16 @@
 ################################################################################
 ##
 ##
-@LEGAL=../auto-data/legalgen.txt
+@LEGAL=legalgen.txt
 @PROJECT=ArrowZip, a demonstration of the Arrow MAX1000 FPGA board
+@SDC.FILE=arrowzip.xdc
 @REGISTER_BUS=hb
-# @XDC.FILE=nexysv.xdc
-# @XDC.FILE=arty.xdc
-#
 # @KEYS.TRIMLIST is a list of all string keys that need to be trimmed (have
 # spaces removed from either side) before being used
 # @KEYS.INTLIST is a list of all things that need to be converted to integers
 @KEYS.INTLIST= BUS_ADDRESS_WIDTH NADDR NPIC NSCOPES PIC.MAX REGS.N ID
 @DEFAULT.BUS=wb
-# @$RESET_ADDRESS=@$flash.BASE
-@$RESET_ADDRESS=@$bkram.BASE
-@RESET_ADDRESS.FORMAT=32'h%08x
+@REGISTER.BUS=hb
 @VERILATOR_PREFIX=v
 @REGDEFS.H.INSERT=
 typedef	struct {

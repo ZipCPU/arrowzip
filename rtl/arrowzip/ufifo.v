@@ -268,7 +268,7 @@ module ufifo(i_clk, i_rst, i_wr, i_data, o_empty_n, i_rd, o_data, o_status, o_er
 		(RXFIFO!=0)?w_half_full:w_half_full,
 		// A '1' here means the FIFO can be read from (if it is a
 		// receive FIFO), or be written to (if it isn't).
-		(RXFIFO!=0)?r_empty_n:w_full_n
+		(RXFIFO!=0)?r_empty_n:!w_full_n
 	};
 
 	assign	o_empty_n = r_empty_n;
@@ -293,21 +293,6 @@ module ufifo(i_clk, i_rst, i_wr, i_data, o_empty_n, i_rd, o_data, o_status, o_er
 //
 //
 	reg	f_past_valid, f_last_clk;
-
-	initial restrict(i_rst);
-
-	always @($global_clock)
-	begin
-		restrict(i_clk == !f_last_clk);
-		f_last_clk <= i_clk;
-		if (!$rose(i_clk))
-		begin
-			`ASSUME($stable(i_rst));
-			`ASSUME($stable(i_wr));
-			`ASSUME($stable(i_data));
-			`ASSUME($stable(i_rd));
-		end
-	end
 
 	//
 	// Underflows are a very real possibility, should the user wish to
@@ -368,6 +353,20 @@ module ufifo(i_clk, i_rst, i_wr, i_data, o_empty_n, i_rd, o_data, o_status, o_er
 					&&($past(will_overflow)))
 				assert(o_err);
 		end
+	end
+
+	always @(posedge i_clk)
+	if (RXFIFO)
+	begin
+		assert(o_status[0] == (f_fill != 0));
+		assert(o_status[1] == (f_fill[LGFLEN-1]));
+	end
+
+	always @(posedge i_clk)
+	if (!RXFIFO) // Transmit FIFO interrupt flags
+	begin
+		assert(o_status[0] == (!w_full_n));
+		assert(o_status[1] == (!f_fill[LGFLEN-1]));
 	end
 
 `endif

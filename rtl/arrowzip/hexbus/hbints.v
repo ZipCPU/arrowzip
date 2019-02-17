@@ -11,7 +11,7 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Copyright (C) 2017, Gisselquist Technology, LLC
+// Copyright (C) 2017-2019, Gisselquist Technology, LLC
 //
 // This file is part of the hexbus debugging interface.
 //
@@ -64,7 +64,7 @@ module	hbints(i_clk, i_reset, i_interrupt,
 	always @(posedge i_clk)
 		if (i_reset)
 			int_state <= 1'b0;
-		else if ((i_interrupt)&&(!int_state))
+		else if (i_interrupt)
 			int_state <= 1'b1;
 		else if ((!pending_interrupt)&&(!i_interrupt))
 			int_state <= 1'b0;

@@ -111,4 +111,10 @@ buildswap(const unsigned char *p) {
 	return r;
 }
 
+void
+byteswapbuf(int ln, uint32_t *buf) {
+	for(int i=0; i<ln; i++)
+		buf[i] = byteswap(buf[i]);
+}
+
 
