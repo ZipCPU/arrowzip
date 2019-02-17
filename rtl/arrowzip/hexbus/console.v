@@ -198,12 +198,13 @@ module	console(i_clk, i_rst,
 	/////////////////////////////////////////
 	wire		tx_empty_n, txf_err;
 	wire	[15:0]	txf_status;
-	reg		txf_wb_write;
-	reg	[6:0]	txf_wb_data;
+	wire		txf_wb_write;
+	wire	[6:0]	txf_wb_data;
 
 	generate if (LCLLGFLEN > 0)
 	begin : TX_WFIFO
-		reg		tx_console_reset;
+		reg		tx_console_reset, r_txf_wb_write;
+		reg	[6:0]	r_txf_wb_data;
 		// Unlike the receiver which goes from RXCONSOLE -> UFIFO -> WB,
 		// the transmitter basically goes WB -> UFIFO -> TXCONSOLE.
 		// Hence, to build support for the transmitter, we start with
@@ -213,13 +214,17 @@ module	console(i_clk, i_rst,
 		// create a write command line, and latch the data for the
 		// extra clock that it'll take so that the command and data can
 		// be both true on the same clock.
-		initial	txf_wb_write = 1'b0;
+		initial	r_txf_wb_write = 1'b0;
 		always @(posedge i_clk)
 		begin
-			txf_wb_write <= (i_wb_stb)&&(i_wb_addr == `CONSOLE_TXREG)
+			r_txf_wb_write <= (i_wb_stb)&&(i_wb_addr == `CONSOLE_TXREG)
 						&&(i_wb_we);
-			txf_wb_data  <= i_wb_data[6:0];
+			r_txf_wb_data  <= i_wb_data[6:0];
 		end
+
+		assign	txf_wb_write = 1'b0;
+		assign	txf_wb_data  = 6'b0;
+
 
 		// Transmit FIFO
 		//

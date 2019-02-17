@@ -1,4 +1,4 @@
-///////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
 //
 // Filename:	cputest.c
 //
@@ -12,9 +12,9 @@
 // Creator:	Dan Gisselquist, Ph.D.
 //		Gisselquist Technology, LLC
 //
-///////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
 //
-// Copyright (C) 2015-2016,2018 Gisselquist Technology, LLC
+// Copyright (C) 2015-2018, Gisselquist Technology, LLC
 //
 // This program is free software (firmware): you can redistribute it and/or
 // modify it under the terms of  the GNU General Public License as published
@@ -35,11 +35,12 @@
 //		http://www.gnu.org/licenses/gpl.html
 //
 //
-///////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
 //
 //
-#include "../zlib/zipcpu.h"
+#include <stdint.h>
 #include "board.h"
+#include "zipcpu.h"
 
 #ifndef	NULL
 #define NULL	(void *)0
@@ -48,12 +49,15 @@
 #define	PIC		(*_buspic)
 #define	TIMER		(*_bustimer)
 
-#ifdef	_BOARD_HAS_ZIPSCOPE
+#ifdef	ZIPSCOPE_SCOPE
 #define	HAVE_SCOPE
+#endif
+#ifdef	HAVE_SCOPE
 #define	SCOPEc			_zipscope->s_ctrl
 #define	SCOPE_DELAY		4
-#define	TRIGGER_SCOPE_NOW	(WBSCOPE_TRIGGER|SCOPE_DELAY)
+#define	TRIGGER_SCOPE_NOW	((unsigned)(WBSCOPE_TRIGGER|SCOPE_DELAY))
 #define	PREPARE_SCOPE		SCOPE_DELAY
+#else
 #endif
 
 unsigned	zip_ucc(void);
@@ -66,7 +70,6 @@ void	txchr(char v);
 void	txstr(const char *str);
 void	txhex(int num);
 void	tx4hex(int num);
-
 
 
 asm("\t.section\t.start\n"
@@ -1089,22 +1092,31 @@ void	wait(unsigned int msk) {
 
 asm("\n\t.text\nidle_task:\n\tWAIT\n\tBRA\tidle_task\n");
 
+#ifdef	_BOARD_HAS_BUSCONSOLE
+#define	_ZIP_HAS_WBUART
+#endif
+
 __attribute__((noinline))
 void	txchr(char v) {
-	if (zip_cc() & CC_GIE) {
-		if (PIC & BUSPIC_UARTTX)
-			PIC = BUSPIC_UARTTX;
-		while((PIC & BUSPIC_UARTTX)==0)
-			;
-	} else
-		wait(BUSPIC_UARTTX);
-	_uart->u_tx = v;
+#ifdef	_ZIP_HAS_WBUART
+#define	TXBUSY	((_uart->u_fifo & 0x010000)==0)
+	while(TXBUSY)
+		;
+	uint8_t c = v;
+	_uart->u_tx = (unsigned)c;
+#else
+#error "No uart defined"
+#endif
+	// asm("\tNOUT %0\n" : : "r"(v));
 }
 
 void	wait_for_uart_idle(void) {
-	PIC = BUSPIC_UARTTX;
-	while((PIC & BUSPIC_UARTTX)==0)
+#ifdef	_ZIP_HAS_WBUART
+	while(TXBUSY)	// While the FIFO is non-empty
 		;
+#else
+#error "No uart defined"
+#endif
 }
 
 __attribute__((noinline))
@@ -1168,6 +1180,9 @@ void	test_fails(int start_time, int *listno) {
 
 	MARKSTOP;
 	save_context(context);
+	*listno++ = context[1];
+	*listno++ = context[14];
+	*listno++ = context[15];
 #ifdef	HAVE_COUNTER
 	*listno   = stop_time;
 #endif
@@ -1230,7 +1245,6 @@ void entry(void) {
 	int	start_time, i;
 	int	cc_fail, cis_insns = 0;
 
-
 	for(i=0; i<32; i++)
 		testlist[i] = -1;
 
@@ -1244,11 +1258,15 @@ void entry(void) {
 	SCOPEc = PREPARE_SCOPE;
 #endif
 
+
+	// UART_CTRL = 82;	// 1MBaud, given n 82.5MHz clock
+	// UART_CTRL = 705; // 115200 Baud, given n 81.25MHz clock
 	// *UART_CTRL = 8333; // 9600 Baud, 8-bit chars, no parity, one stop bit
 	// *UART_CTRL = 25; // 9600 Baud, 8-bit chars, no parity, one stop bit
 	//
 
 	txstr("\r\n");
+
 	txstr("Running CPU self-test\r\n");
 	txstr("-----------------------------------\r\n");
 
@@ -1477,6 +1495,11 @@ void entry(void) {
 	asm("NEXIT 0");
 	zip_halt();
 }
+
+int	main(int argc, char **argv) {
+	entry();
+}
+
 
 // To build this:
 //	zip-gcc -O3 -Wall -Wextra -nostdlib -fno-builtin -T xula.ld -Wl,-Map,cputest.map cputest.cpp -o cputest

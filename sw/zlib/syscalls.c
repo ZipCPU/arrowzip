@@ -11,7 +11,7 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Copyright (C) 2015-2018, Gisselquist Technology, LLC
+// Copyright (C) 2015-2019, Gisselquist Technology, LLC
 //
 // This program is free software (firmware): you can redistribute it and/or
 // modify it under the terms of  the GNU General Public License as published
@@ -47,29 +47,43 @@
 #include "bootloader.h"
 #include "zipcpu.h"
 
+#ifdef	_BOARD_HAS_BUSCONSOLE
+#define	_ZIP_HAS_WBUART
+#define	_ZIP_HAS_UARTTX
+#define	_ZIP_HAS_UARTRX
+#define	UARTRX	_uart->u_rx
+#define	UARTTX	_uart->u_tx
+#endif
+
 void
 _outbyte(char v) {
-#if	defined(_BOARD_HAS_BUSCONSOLE)
+#ifdef	_ZIP_HAS_WBUART
 	if (v == '\n') {
 		// Depend upon the WBUART, not the PIC
-		while(_uart->u_fifo & 0x010000)
+		while((_uart->u_fifo & 0x010000)==0)
 			;
-		_uart->u_tx = (unsigned)'\r';
+		UARTTX = (unsigned)'\r';
 	}
 
 	// Depend upon the WBUART, not the PIC
-	while(_uart->u_fifo & 0x010000)
+	while((_uart->u_fifo & 0x010000)==0)
 		;
 	uint8_t c = v;
-	_uart->u_tx = (unsigned)c;
+	UARTTX = (unsigned)c;
 #else
-#error	"No console"
+#ifdef	_ZIP_HAS_UARTTX
+	// Depend upon the WBUART, not the PIC
+	while(UARTTX & 0x100)
+		;
+	uint8_t c = v;
+	UARTTX = (unsigned)c;
+#endif
 #endif
 }
 
 int
 _inbyte(void) {
-#ifdef	_BOARD_HAS_BUSCONSOLE
+#ifdef	UARTRX
 	const	int	echo = 1, cr_into_nl = 1;
 	static	int	last_was_cr = 0;
 	int	rv;
@@ -80,7 +94,7 @@ _inbyte(void) {
 	// 3. \r\n's should quietly be turned into \n's
 	// 4. \n's should be passed as is
 	// Insist on at least one character
-	rv = _uart->u_rx;
+	rv = UARTRX;
 	if (rv & 0x0100)
 		rv = -1;
 	else if ((cr_into_nl)&&(rv == '\r')) {
@@ -148,14 +162,60 @@ _getpid_r(struct _reent *reent)
 int
 _gettimeofday_r(struct _reent *reent, struct timeval *ptimeval, void *ptimezone)
 {
-#ifdef	_BOARD_HAS_RTCLIGHT
+#ifdef	_BOARD_HAS_RTC
 	if (ptimeval) {
 		uint32_t	now, date;
 		unsigned	s, m, h, tod;
 
 		now = _rtc->r_clock;
 
+#ifdef	_BOARD_HAS_RTCDATE
+		unsigned	d, y, c, yy, days_since_epoch;
+		int		ly;
+
+		date= *_rtcdate;
+
+		d = ( date     &0x0f)+((date>> 4)&0x0f)*10;
+		m = ((date>> 8)&0x0f)+((date>>12)&0x0f)*10;
+		y = ((date>>16)&0x0f)+((date>>20)&0x0f)*10;
+		c = ((date>>24)&0x0f)+((date>>28)&0x0f)*10;
+
+		ly = 0;
+		if ((y&3)==0) {
+			if (y!=0)
+				ly = 1;
+			else if ((y&3)==0)
+				ly = 1;
+		}
+
+		days_since_epoch = d;
+		if (m>1) {
+			days_since_epoch += 31;
+			if (m>2) {
+				days_since_epoch += 28;
+				if (ly) days_since_epoch++;
+				if (m>3)  { days_since_epoch += 31;
+				if (m>4)  { days_since_epoch += 30;
+				if (m>5)  { days_since_epoch += 31;
+				if (m>6)  { days_since_epoch += 30;
+				if (m>7)  { days_since_epoch += 31;
+				if (m>8)  { days_since_epoch += 31;
+				if (m>9)  { days_since_epoch += 30;
+				if (m>10) { days_since_epoch += 31;
+				if (m>11)   days_since_epoch += 30;
+		}}}}}}}}}}
+
+		for(yy=1970; yy<(c*100+y); yy++) {
+			if ((yy&3)==0)
+				days_since_epoch += 366;
+			else
+				days_since_epoch += 365;
+		}
+
+		ptimeval->tv_sec  = days_since_epoch * 86400l;
+#else
 		ptimeval->tv_sec  = 0;
+#endif
 
 		s = ( now     &0x0f)+((now>> 4)&0x0f)*10;
 		m = ((now>> 8)&0x0f)+((now>>12)&0x0f)*10;
@@ -213,12 +273,12 @@ _open_r(struct _reent *reent, const char *file, int flags, int mode)
 int
 _read_r(struct _reent *reent, int file, void *ptr, size_t len)
 {
+#ifdef	UARTRX
 	if (STDIN_FILENO == file)
 	{
 		int	nr = 0, rv;
 		char	*chp = ptr;
 
-#ifdef	_BOARD_HAS_BUSCONSOLE
 		while((rv=_inbyte()) &0x0100)
 			;
 		*chp++ = (char)rv;
@@ -232,6 +292,7 @@ _read_r(struct _reent *reent, int file, void *ptr, size_t len)
 
 		// if (rv & 0x01000) _uartrx = 0x01000;
 		return nr;
+	}
 #endif
 	}
 	errno = ENOSYS;

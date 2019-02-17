@@ -29,23 +29,33 @@
 //		by the linker as the lowest memory address in a space that can
 //		be used by a malloc/free restore capability.
 //
-//	_flash:
-//		The address of the beginning of physical FLASH device.  This is
-//		not the first usable address on that device, as that is often
-//		reserved for the first two FPGA configurations.
+//	_rom:
+//		The address of the beginning of a physical ROM device--often
+//		a SPI flash device.  This is not the necessariliy the first
+//		usable address on that device, as that is often reserved for
+//		the first two FPGA configurations.
 //
-//	_bkram:
-//		The first address of the block RAM memory within the FPGA.
+//		If no ROM device is present, set _rom=0 and the bootloader
+//		will quietly and silently return.
 //
-//	_sdram:
-//		The address of the beginning of physical SDRAM.
+//	_kram:
+//		The first address of a fast RAM device (if present).  I'm
+//		calling this device "Kernel-RAM", because (if present) it is
+//		a great place to put kernel code.
 //
-//	_kernel_image_start:
-//		The address of that location within FLASH where the sections
+//		if _kram == 0, no memory will be mapped to kernel RAM.
+//
+//	_ram:
+//		The main RAM device of the system.  This is often the address
+//		of the beginning of physical SDRAM, if SDRAM is present.
+//
+//	_kram_start:
+//		The address of that location within _rom where the sections
 //		needing to be moved begin at.
 //
-//	_kernel_image_end:
-//		The last address within block RAM that needs to be filled in.
+//	_kram_end:
+//		The last address within the _kram device that needs to be
+//		filled in.
 //
 //	_ram_image_start:
 //		This address is more confusing.  This is equal to one past the
@@ -81,7 +91,7 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Copyright (C) 2017-2018, Gisselquist Technology, LLC
+// Copyright (C) 2017-2019, Gisselquist Technology, LLC
 //
 // This program is free software (firmware): you can redistribute it and/or
 // modify it under the terms of  the GNU General Public License as published
@@ -121,21 +131,9 @@
 // however: 1) It obscures for any readers of this code what is actually
 // happening, and 2) it makes the code dependent upon yet another piece of the
 // hardware design working.  For these reasons, we allow you to turn it off.
-
-#ifndef	_BOARD_HAS_FLASH
-#define	SKIP_BOOTLOADER
+#ifdef _HAS_ZIPSYS_DMA
+#define	USE_DMA
 #endif
-
-__attribute__ ((section (".boot")))
-void __define_the_top_of_the_stack__(void)  {
-#if	defined(_BOARD_HAS_SDRAM)
-asm volatile(".equ\t_top_of_stack,_sdram+%0\n":: "i"(_sdram+sizeof(_sdram)));
-// extern	int	const	*_top_of_stack = _sdram + sizeof(_sdram);
-#elif	defined(_BOARD_HAS_BKRAM)
-// extern	int	const	*_top_of_stack = bkram + sizeof(_bkram);
-asm volatile(".equ\t_top_of_stack,_bkram+%0\n":: "i"(sizeof(_bkram)));
-#endif
-}
 
 //
 // _start:
@@ -184,8 +182,8 @@ asm("\t.section\t.start,\"ax\",@progbits\n"
 	//
 "_graceful_kernel_exit:"	"\t; Halt on any return from main--gracefully\n"
 	"\tJSR\texit\n"	"\t; Call the _exit as part of exiting\n"
-"\t.global\t_hw_shutdown\n"
-"_hw_shutdown:\n"
+"\t.global\t_exit\n"
+"_exit:\n"
 	"\tNEXIT\tR1\n"		"\t; If in simulation, call an exit function\n"
 "_kernel_is_dead:"		"\t; Halt the CPU\n"
 	"\tHALT\n"		"\t; We should *never* continue following a\n"
@@ -214,38 +212,92 @@ extern	void	_bootloader(void) __attribute__ ((section (".boot")));
 //
 #ifndef	SKIP_BOOTLOADER
 void	_bootloader(void) {
-	int	*rdp, *wrp;
+	if (_rom == NULL) {
+		int	*wrp = _ram_image_end;
+		while(wrp < _ram_image_end)
+			*wrp++ = 0;
+		return;
+	}
+
+	int *ramend = _ram_image_end, *bsend = _bss_image_end,
+	    *kramdev = (_kram) ? _kram : _ram;
+
+#ifdef	USE_DMA
+	// asm("\tNSTR "DMA\n"\n");
+	_zip->z_dma.d_ctrl= DMACLEAR;
+	_zip->z_dma.d_rd = _kram_start; // Flash memory
+	_zip->z_dma.d_wr  = (_kram) ? _kram : _ram;
+	if (_kram_start != _kram_end) {
+		if (_kram_end != _kram) {
+			// asm("NSTR \"KRAM\n\"\n");
+			_zip->z_dma.d_len = _kram_end - _kram;
+			_zip->z_dma.d_wr  = _kram;
+			_zip->z_dma.d_ctrl= DMACCOPY;
+
+			_zip->z_pic = SYSINT_DMAC;
+			while((_zip->z_pic & SYSINT_DMAC)==0)
+				;
+		}
+	}
+
+	// _zip->z_dma.d_rd // Keeps the same value
+	if (NULL != _kram) {
+		// Writing to kram, need to switch to RAM
+		_zip->z_dma.d_wr  = _ram;
+		_zip->z_dma.d_len = _ram_image_end - _ram;
+	} else {
+		// Continue writing to the RAM device from where we left off
+		_zip->z_dma.d_len = _ram_image_end - _kram_end;
+	}
+
+	if (_zip->z_dma.d_len>0) {
+		// asm("NSTR \"RAM\n\"\n");
+		_zip->z_dma.d_ctrl= DMACCOPY;
+
+		_zip->z_pic = SYSINT_DMAC;
+		while((_zip->z_pic & SYSINT_DMAC)==0)
+			;
+	}
+
+	if (_bss_image_end != _ram_image_end) {
+		volatile int	zero = 0;
+
+		// asm("NSTR \"BSS\n\"\n");
+		_zip->z_dma.d_len = _bss_image_end - _ram_image_end;
+		_zip->z_dma.d_rd  = (unsigned *)&zero;
+		// _zip->z_dma.wr // Keeps the same value
+		_zip->z_dma.d_ctrl = DMACCOPY|DMA_CONSTSRC;
+
+		_zip->z_pic = SYSINT_DMAC;
+		while((_zip->z_pic & SYSINT_DMAC)==0)
+			;
+	}
+#else
+	int	*rdp = _kram_start, *wrp = (_kram) ? _kram : _ram;
 
 	//
 	// Load any part of the image into block RAM, but *only* if there's a
 	// block RAM section in the image.  Based upon our LD script, the
-	// block RAM should be filled from _bkram to _kernel_image_end.
-	// It starts at _kernel_image_start --- our last valid address within
+	// block RAM should be filled from _blkram to _kernel_image_end.
+	// It starts at _kram_start --- our last valid address within
 	// the flash address region.
 	//
-#ifdef	_BOARD_HAS_KERNEL_SPACE
-	rdp = _kernel_image_start;
-	wrp = _bkram;
-	if (_kernel_image_end != _kernel_image_start) {
-		do {
+	if (_kram_end != _kram_start) {
+		while(wrp < _kram_end)
 			*wrp++ = *rdp++;
-		} while(wrp < _kernel_image_end);
-		if (_kernel_image_end < _sdram)
-			wrp = _sdram;
 	}
-#else
-	rdp = _ram_image_start;
-	wrp = (int *)_ram;
-#endif
+
+	if (NULL != _ram)
+		wrp  = _ram;
 
 	//
 	// Now, we move on to the SDRAM image.  We'll here load into SDRAM
-	// memory up to the end of the SDRAM image, _ram_image_end.
+	// memory up to the end of the SDRAM image, _sdram_image_end.
 	// As with the last pointer, this one is also created for us by the
 	// linker.
 	// 
 	// while(wrp < sdend)	// Could also be done this way ...
-	while(wrp < _ram_image_end)
+	for(int i=0; i< ramend - _ram; i++)
 		*wrp++ = *rdp++;
 
 	//
@@ -254,9 +306,10 @@ void	_bootloader(void) {
 	// initialization is expected within it.  We start writing where
 	// the valid SDRAM context, i.e. the non-zero contents, end.
 	//
-	while(wrp < _bss_image_end)
+	for(int i=0; i<bsend - ramend; i++)
 		*wrp++ = 0;
 
+#endif
 }
 #endif
 

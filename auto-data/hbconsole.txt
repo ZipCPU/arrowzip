@@ -54,6 +54,18 @@
 @$SETUP=@$(CLOCK.FREQUENCY) / @$BAUDRATE
 @SETUP.FORMAT=24'h%x
 @$BUS_ADDRESS_WIDTH=@$(MASTER.BUS.AWID)
+@TOP.PORTLIST=
+		// UART/host to wishbone interface
+		i_uart_rx, o_uart_tx
+@TOP.IODECL=
+	// UART/host to wishbone interface
+	// (Debugging access) Serial port
+	input	wire	i_uart_rx;
+	output	wire	o_uart_tx;
+@TOP.DEFNS=
+	wire	hb_err;
+@TOP.MAIN=
+		i_uart_rx, o_uart_tx, hb_err
 @MAIN.PORTLIST=
 		// UART/host to wishbone interface
 		i_uart_rx, o_uart_tx, o_hb_err
@@ -140,6 +152,8 @@
 @SIM.TICK=
 		m_core->i_uart_rx = (*m_@$(PREFIX))(m_core->o_uart_tx);
 @SIM.CLOCK=clk
+@RTL.MAKE.GROUP= HBUART
+@RTL.MAKE.FILES= txuartlite.v rxuartlite.v ufifo.v
 #
 #
 #

@@ -12,7 +12,7 @@
 ##
 ################################################################################
 ##
-## Copyright (C) 2017, Gisselquist Technology, LLC
+## Copyright (C) 2017-2019, Gisselquist Technology, LLC
 ##
 ## This program is free software (firmware): you can redistribute it and/or
 ## modify it under the terms of  the GNU General Public License as published
@@ -38,7 +38,7 @@
 ##
 @PREFIX=bkram
 @DEVID=BKRAM
-@$LGMEMSZ=15
+@$LGMEMSZ=12
 @LGMEMSZ.FORMAT=%d
 @$NADDR=(1<<(@$THIS.LGMEMSZ-2))
 @$NBYTES=(1<<(@$THIS.LGMEMSZ))
@@ -46,10 +46,9 @@
 @ACCESS=@$(DEVID)_ACCESS
 @SLAVE.TYPE=MEMORY
 @SLAVE.BUS=wb
-@LD.PERM=wx
 @MAIN.INSERT=
 	memdev #(.LGMEMSZ(@$THIS.LGMEMSZ), .EXTRACLOCK(1))
-		@$(PREFIX)i(i_clk,
+		@$(PREFIX)i(i_clk, i_reset,
 			(wb_cyc), (wb_stb)&&(@$(PREFIX)_sel), wb_we,
 				wb_addr[(@$THIS.LGMEMSZ-3):0], wb_data, wb_sel,
 				@$(PREFIX)_ack, @$(PREFIX)_stall, @$(PREFIX)_data);
@@ -61,10 +60,8 @@
 @BDEF.OSDEF=_BOARD_HAS_@$(DEVID)
 @MEM.NAME= @$(PREFIX)
 @BDEF.OSVAL=extern char	_@$(MEM.NAME)[@$NBYTES];
-@LDSCRIPT.PSTR=	wx
-@LDSCRIPT.PTR=	@$(MEM.NAME)
-@LDSCRIPT.DEF=
-_@$(MEM.NAME) = ORIGIN(@$(MEM.NAME))
+@LD.PERM=	wx
+@LD.NAME=	@$(MEM.NAME)
 @RTL.MAKE.GROUP= @$(DEVID)
 @RTL.MAKE.FILES= memdev.v
 @$NADDRHX = @$NADDR

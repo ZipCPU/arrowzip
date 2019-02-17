@@ -53,10 +53,10 @@
 #include "port.h"
 #include "llcomms.h"
 #include "hexbus.h"
+#include <design.h>
 #include "regdefs.h"
 #include "zipelf.h"
 #include "byteswap.h"
-#include <design.h>
 
 #undef	FLASH_ACCESS
 
@@ -67,31 +67,24 @@
 FPGA	*m_fpga;
 
 void	usage(void) {
-#ifdef	INCLUDE_ZIPCPU
 	printf("USAGE: zipload [-hr] <zip-program-file>\n");
 	printf("\n"
 "\t-h\tDisplay this usage statement\n"
 "\t-r\tStart the ZipCPU running from the address in the program file\n");
-#else
-	printf(
-"This program is designed to load the ZipCPU into a design.  It depends upon\n"
-"the ZipCPU having been built into the design, as well as the registers\n"
-"within the design having known locations.  When this program was built,\n"
-"however, there was no ZiPCPU within the design.\n");
-#endif
 }
 
 int main(int argc, char **argv) {
+#ifndef	R_ZIPCTRL
+	fprintf(stderr, "This design doesn\'t seem to contain a ZipCPU\n");
+	return	EXIT_FAILURE;
+#else
 	int		skp=0;
-	bool		verbose = false;
+	bool		start_when_finished = false, verbose = false;
 	unsigned	entry = 0;
-#ifdef	INCLUDE_ZIPCPU
-	bool		start_when_finished = false;
-#endif
 #ifdef	FLASH_ACCESS
 	FLASHDRVR	*flash = NULL;
 #endif
-	const char	*execfile = NULL;
+	const char	*bitfile = NULL, *altbitfile = NULL, *execfile = NULL;
 
 	if (argc < 2) {
 		usage();
@@ -106,11 +99,9 @@ int main(int argc, char **argv) {
 				usage();
 				exit(EXIT_SUCCESS);
 				break;
-#ifdef	INCLUDE_ZIPCPU
 			case 'r':
 				start_when_finished = true;
 				break;
-#endif
 			case 'v':
 				verbose = true;
 				break;
@@ -136,16 +127,34 @@ int main(int argc, char **argv) {
 				usage();
 				exit(EXIT_FAILURE);
 			} execfile = argv[argn];
-		} else {
-			printf("Unknown file type, %s\n", argv[argn]);
-			usage();
-			exit(EXIT_FAILURE);
+		} else { // if (isbitfile(argv[argn]))
+			if (!bitfile)
+				bitfile = argv[argn];
+			else if (!altbitfile)
+				altbitfile = argv[argn];
+			else {
+				printf("Unknown file name or too many files, %s\n", argv[argn]);
+				usage();
+				exit(EXIT_FAILURE);
+			}
 		}
 	}
 
-	if (execfile == NULL) {
-		printf("No executable file given!\n\n");
+	if ((execfile == NULL)&&(bitfile == NULL)) {
+		printf("No executable or bit file(s) given!\n\n");
 		usage();
+		exit(EXIT_FAILURE);
+	}
+
+	if ((bitfile)&&(access(bitfile,R_OK)!=0)) {
+		// If there's no code file, or the code file cannot be opened
+		fprintf(stderr, "Cannot open bitfile, %s\n", bitfile);
+		exit(EXIT_FAILURE);
+	}
+
+	if ((altbitfile)&&(access(altbitfile,R_OK)!=0)) {
+		// If there's no code file, or the code file cannot be opened
+		fprintf(stderr, "Cannot open alternate bitfile, %s\n", altbitfile);
 		exit(EXIT_FAILURE);
 	}
 
@@ -153,11 +162,6 @@ int main(int argc, char **argv) {
 		// If there's no code file, or the code file cannot be opened
 		fprintf(stderr, "Cannot open executable, %s\n", execfile);
 		exit(EXIT_FAILURE);
-	}
-
-	if (verbose) {
-		if (execfile)
-			printf("Loading %s into memory\n", execfile);
 	}
 
 	const char *codef = (argc>0)?argv[0]:NULL;
@@ -168,6 +172,8 @@ int main(int argc, char **argv) {
 	memset(fbuf, -1, FLASHLEN);
 #endif
 
+	if (verbose)
+		fprintf(stderr, "ZipLoad: Verbose mode on\n");
 	FPGAOPEN(m_fpga);
 
 	// Make certain we can talk to the FPGA
@@ -182,7 +188,6 @@ int main(int argc, char **argv) {
 		exit(EXIT_FAILURE);
 	}
 
-#ifdef	INCLUDE_ZIPCPU
 	// Halt the CPU
 	try {
 		printf("Halting the CPU\n");
@@ -191,30 +196,20 @@ int main(int argc, char **argv) {
 		fprintf(stderr, "Could not halt the CPU (BUSERR)\n");
 		exit(EXIT_FAILURE);
 	}
-#endif
 
 #ifdef	FLASH_ACCESS
 	flash = new FLASHDRVR(m_fpga);
+#else
+	flash = NULL;
 #endif
-
-	if (verbose) {
-		printf("Memory regions:\n");
-#ifdef	BKRAM_ACCESS
-		printf("\tBlock RAM: %08x - %08x\n",
-			BKRAMBASE, BKRAMBASE+BKRAMLEN);
-#endif
-#ifdef	FLASH_ACCESS
-		printf("\tFlash (ROM): %08x - %08x\n",
-			FLASHBASE, FLASHBASE+FLASHLEN);
-#endif
-#ifdef	SDRAM_ACCESS
-		printf("\tSDRAM      : %08x - %08x\n",
-			RAMBASE, RAMBASE + RAMLEN);
-#endif
-	}
 
 	if (codef) try {
 		ELFSECTION	**secpp = NULL, *secp;
+#ifdef	FLASH_ACCESS
+		unsigned	startaddr = RESET_ADDRESS;
+		unsigned	codelen = 0;
+#endif
+
 
 		if(iself(codef)) {
 			// zip-readelf will help with both of these ...
@@ -230,11 +225,6 @@ int main(int argc, char **argv) {
 			bool	valid = false;
 			secp=  secpp[i];
 
-			if (verbose) {
-				printf("Section %d: %08x - %08x\n", i,
-					secp->m_start,
-					secp->m_start+secp->m_len);
-			}
 			// Make sure our section is either within block RAM
 #ifdef	BKRAM_ACCESS
 			if ((secp->m_start >= BKRAMBASE)
@@ -253,9 +243,9 @@ int main(int argc, char **argv) {
 
 #ifdef	SDRAM_ACCESS
 			// Or SDRAM
-			if ((secp->m_start >= RAMBASE)
+			if ((secp->m_start >= SDRAMBASE)
 				&&(secp->m_start+secp->m_len
-						<= RAMBASE+RAMLEN))
+						<= SDRAMBASE+SDRAMLEN))
 				valid = true;
 #endif
 			if (!valid) {
@@ -265,19 +255,15 @@ int main(int argc, char **argv) {
 			}
 		}
 
-#ifdef	FLASH_ACCESS
-		unsigned	startaddr = 0, codelen = 0;
-		startaddr = RESET_ADDRESS;
-#endif
 		for(int i=0; secpp[i]->m_len; i++) {
 			secp = secpp[i];
 
 #ifdef	SDRAM_ACCESS
-			if ((secp->m_start >= RAMBASE)
+			if ((secp->m_start >= SDRAMBASE)
 				&&(secp->m_start+secp->m_len
-						<= RAMBASE+RAMLEN)) {
+						<= SDRAMBASE+SDRAMLEN)) {
 				if (verbose)
-					printf("Writing to MEM: %08x-%08x\n",
+					printf("Writing to SDRAM: %08x-%08x\n",
 						secp->m_start,
 						secp->m_start+secp->m_len);
 				unsigned ln = (secp->m_len+3)&-4;
@@ -338,20 +324,18 @@ int main(int argc, char **argv) {
 		}
 
 #ifdef	FLASH_ACCESS
-		if ((flash)&&(codelen>0)&&(!flash->write(startaddr,
-				codelen, &fbuf[startaddr-FLASHBASE], true))) {
+		if ((flash)&&(codelen>0)&&(!flash->write(startaddr, codelen, &fbuf[startaddr-FLASHBASE], true))) {
 			fprintf(stderr, "ERR: Could not write program to flash\n");
 			exit(EXIT_FAILURE);
 		} else if ((!flash)&&(codelen > 0)) {
 			fprintf(stderr, "ERR: Cannot write to flash: Driver didn\'t load\n");
-			// fprintf(stderr, "flash->write(%08x, %d, ... );\n",
-			//	startaddr, codelen);
+			// fprintf(stderr, "flash->write(%08x, %d, ... );\n", startaddr,
+			//	codelen);
 		}
 #endif
 
 		if (m_fpga) m_fpga->readio(R_VERSION); // Check for bus errors
 
-#ifdef	INCLUDE_ZIPCPU
 		// Now ... how shall we start this CPU?
 		printf("Clearing the CPUs registers\n");
 		for(int i=0; i<32; i++) {
@@ -359,10 +343,10 @@ int main(int argc, char **argv) {
 			m_fpga->writeio(R_ZIPDATA, 0);
 		}
 
+		m_fpga->writeio(R_ZIPCTRL, CPU_HALT|CPU_CLRCACHE);
 		printf("Setting PC to %08x\n", entry);
 		m_fpga->writeio(R_ZIPCTRL, CPU_HALT|CPU_sPC);
 		m_fpga->writeio(R_ZIPDATA, entry);
-		m_fpga->writeio(R_ZIPCTRL, CPU_HALT|CPU_CLRCACHE);
 
 		if (start_when_finished) {
 			printf("Starting the CPU\n");
@@ -373,17 +357,15 @@ int main(int argc, char **argv) {
 			printf("> wbregs cpu 0x0f\n");
 			printf("\n");
 		}
-#endif
 	} catch(BUSERR a) {
-		fprintf(stderr, "ARROWZIP-BUS error: %08x\n", a.addr);
+		fprintf(stderr, "ZBASIC-BUS error: %08x\n", a.addr);
 		exit(-2);
 	}
 
-#ifdef	INCLUDE_ZIPCPU
 	printf("CPU Status is: %08x\n", m_fpga->readio(R_ZIPCTRL));
-#endif
 	if (m_fpga) delete	m_fpga;
 
 	return EXIT_SUCCESS;
+#endif
 }
 

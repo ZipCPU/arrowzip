@@ -6,8 +6,8 @@
 //
 // Purpose:	This is the C++ program on the command side that will interact
 //		with a UART on an FPGA, both sending and receiving characters.
-//	Any bus interaction will call routines from this lower level library
-//	to accomplish the actual connection to and transmission to/from the board.
+//	Any bus interaction will call routines from this lower level library to
+//	accomplish the actual connection to and transmission to/from the board.
 //
 //
 // Creator:	Dan Gisselquist, Ph.D.
@@ -173,3 +173,5 @@ void	NETCOMMS::close(void) {
 	}
 	::close(m_fdw);
 }
+
+

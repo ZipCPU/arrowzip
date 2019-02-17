@@ -12,7 +12,7 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Copyright (C) 2017, Gisselquist Technology, LLC
+// Copyright (C) 2017-2019, Gisselquist Technology, LLC
 //
 // This file is part of the hexbus debugging interface.
 //
@@ -74,12 +74,14 @@ module	hbnewline(i_clk, i_reset,
 
 	initial	last_cr  = 1'b1;
 	initial	cr_state = 1'b0;
+	initial	loaded   = 1'b0;
 	always @(posedge i_clk)
 		if (i_reset)
 		begin
 			cr_state <= 1'b0;
 			last_cr  <= 1'b0;
 			o_nl_stb <= 1'b0;
+			loaded   <= 1'b0;
 		end else if ((i_stb)&&(!o_nl_busy))
 		begin
 			o_nl_stb  <= i_stb;

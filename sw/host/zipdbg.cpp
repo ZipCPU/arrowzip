@@ -336,7 +336,8 @@ public:
 		unsigned int	s;
 
 		writeio(R_ZIPCTRL, CMD_HALT|(a&0x3f));
-		while((stalled())&&(errcount<MAXERR)&&(!m_user_break))
+		while((((s=readio(R_ZIPCTRL))&CPU_STALL)== 0)&&(errcount<MAXERR)
+				&&(!m_user_break))
 			errcount++;
 		if (m_user_break) {
 			endwin();
@@ -344,7 +345,6 @@ public:
 		} else if (errcount >= MAXERR) {
 			endwin();
 			printf("ERR: errcount(%d) >= MAXERR on cmd_read(a=%2x)\n", errcount, a);
-			s = readio(R_ZIPCTRL);
 			printf("ZIPCTRL = 0x%08x", s);
 			if ((s & 0x0200)==0) printf(" STALL");
 			if  (s & 0x0400) printf(" HALTED");
@@ -761,7 +761,7 @@ int	main(int argc, char **argv) {
 		printf("%s", gbl_errstr);
 		exit(-2);
 	} else if (gbl_errstr[0]) {
-		printf("ERR str, but no err code\nstr is: %s\n", gbl_errstr);
+		printf("ERR str, but no err code\n%s\n", gbl_errstr);
 	} else
 		printf("SUCCESS\n");
 

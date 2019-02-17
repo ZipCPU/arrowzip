@@ -38,7 +38,7 @@
 ################################################################################
 ##
 ##
-all:	test cpudefs.h design.h
+all:	main dualflexpress cpudefs.h design.h
 YYMMDD=`date +%Y%m%d`
 CXX   := g++
 FBDIR := .
@@ -54,18 +54,24 @@ VFLAGS     = -MMD -Wall -trace -Mdir $(VDIRFB) $(AUTOVDIRS) -y ../common -cc
 
 -include make.inc
 
-.PHONY: test auto-test
-test:	auto-test
-
 # .PHONY: hand-test
 # hand-test: $(VDIRFB)/Vbusmaster__ALL.a
 
-.PHONY: auto-test
-auto-test: $(VDIRFB)/Vmain__ALL.a
+.PHONY: main
+main: $(VDIRFB)/Vmain__ALL.a
 
-$(VDIRFB)/Vbusmaster__ALL.a: $(VDIRFB)/Vbusmaster.h $(VDIRFB)/Vbusmaster.cpp
-$(VDIRFB)/Vbusmaster__ALL.a: $(VDIRFB)/Vbusmaster.mk
-$(VDIRFB)/Vbusmaster.h $(VDIRFB)/Vbusmaster.cpp $(VDIRFB)/Vbusmaster.mk: $(SOURCES)
+.PHONY: dual flash
+dual:  dualflexpress
+flash: dualflexpress
+
+.PHONY: dualflexpress
+dualflexpress: $(VDIRFB)/Vdualflexpress__ALL.a
+
+$(VDIRFB)/Vdualflexpress__ALL.a: $(VDIRFB)/Vdualflexpress.h $(VDIRFB)/Vdualflexpress.cpp
+$(VDIRFB)/Vdualflexpress__ALL.a: $(VDIRFB)/Vdualflexpress.h
+$(VDIRFB)/Vdualflexpress.mk: $(VDIRFB)/Vdualflexpress.h
+$(VDIRFB)/Vdualflexpress.cpp: $(VDIRFB)/Vdualflexpress.h
+$(VDIRFB)/Vdualflexpress.h: dualflexpress.v
 
 $(VDIRFB)/Vmain__ALL.a: $(VDIRFB)/Vmain.h $(VDIRFB)/Vmain.cpp
 $(VDIRFB)/Vmain__ALL.a: $(VDIRFB)/Vmain.mk

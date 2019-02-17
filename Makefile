@@ -13,7 +13,7 @@
 ##
 ################################################################################
 ##
-## Copyright (C) 2015-2018, Gisselquist Technology, LLC
+## Copyright (C) 2015-2019, Gisselquist Technology, LLC
 ##
 ## This program is free software (firmware): you can redistribute it and/or
 ## modify it under the terms of  the GNU General Public License as published
@@ -120,6 +120,7 @@ archive:
 #
 .PHONY: autodata
 autodata: check-autofpga
+	$(SUBMAKE) auto-data
 	$(MAKE) --no-print-directory --directory=auto-data
 	$(call copyif-changed,auto-data/toplevel.v,$(SOCDIR)/toplevel.v)
 	$(call copyif-changed,auto-data/main.v,$(SOCDIR)/main.v)
@@ -127,9 +128,12 @@ autodata: check-autofpga
 	$(call copyif-changed,auto-data/regdefs.cpp,sw/host/regdefs.cpp)
 	$(call copyif-changed,auto-data/board.h,sw/zlib/board.h)
 	$(call copyif-changed,auto-data/board.ld,$(ZIPSW)/board.ld)
+	$(call copyif-changed,auto-data/bkram.ld,$(ZIPSW)/bkram.ld)
+	# $(call copyif-changed,auto-data/sdram.ld,$(ZIPSW)/sdram.ld)
 	$(call copyif-changed,auto-data/rtl.make.inc,$(SOCDIR)/make.inc)
 	$(call copyif-changed,auto-data/testb.h,$(SIMDIR)/testb.h)
 	$(call copyif-changed,auto-data/main_tb.cpp,$(SIMDIR)/main_tb.cpp)
+	# $(call copyif-changed,auto-data/iscachable.v,$(SOCDIR)/iscachable.v)
 
 #
 #
@@ -161,6 +165,14 @@ sw: sw-host sw-zlib sw-board
 
 #
 #
+# Build the host support software
+#
+.PHONY: sw-host
+sw-host:
+	$(SUBMAKE) sw/host
+
+#
+#
 # Build the hardware specific newlib library
 #
 .PHONY: sw-zlib
@@ -174,14 +186,6 @@ sw-zlib: autodata rtl check-zip-gcc
 .PHONY: sw-board
 sw-board: autodata rtl sw-zlib check-zip-gcc
 	+@$(SUBMAKE) $(ZIPSW)
-
-#
-#
-# Build the host support software
-#
-.PHONY: sw-host
-sw-host: autodata rtl check-gpp
-	+@$(SUBMAKE) sw/host
 
 #
 #

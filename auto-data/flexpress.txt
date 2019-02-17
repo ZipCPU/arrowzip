@@ -119,15 +119,15 @@ _@$(PREFIX)=ORIGIN(@$(PREFIX));
 @REGDEFS.H.INSERT=
 
 @SIM.INCLUDE+=
-#include "qspiflashsim.h"
+#include "flashsim.h"
 @SIM.DEFNS+=
 #ifdef	@$(ACCESS)
-	QSPIFLASHSIM	*m_@$(MEM.NAME);
+	FLASHSIM	*m_@$(MEM.NAME);
 	unsigned	m_last_dspi_dat;
 #endif
 @SIM.INIT+=
 #ifdef	@$(ACCESS)
-	m_@$(MEM.NAME) = new QSPIFLASHSIM(FLASHLGLEN);
+	m_@$(MEM.NAME) = new FLASHSIM(FLASHLGLEN);
 	m_last_dspi_dat = 15;
 #endif
 @SIM.TICK +=
