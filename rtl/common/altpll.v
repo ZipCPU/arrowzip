@@ -1,7 +1,5 @@
 (* blackbox *)
-module altpll #(
-parameter	width_clock = 5
-	) (
+module altpll (
 	input	[1:0]	inclk,
 	output	[4:0]	clk,
 	output		locked,

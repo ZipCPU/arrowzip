@@ -69,6 +69,7 @@ int	main(int argc, char **argv) {
 	Verilated::commandArgs(argc, argv);
 
 	const	char *elfload = NULL,
+			*profile_file = NULL,
 			*trace_file = NULL; // "trace.vcd";
 	bool	debug_flag = false, willexit = false;
 	FILE	*profile_fp;

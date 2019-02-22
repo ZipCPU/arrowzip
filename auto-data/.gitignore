@@ -9,3 +9,6 @@ regdefs.cpp
 rtl.make.inc
 testb.h
 toplevel.v
+bkram.ld
+sdram.ld
+iscachable.v

@@ -38,7 +38,7 @@
 ################################################################################
 ##
 ##
-all:	main dualflexpress cpudefs.h design.h
+all:	main cpudefs.h design.h # toplevel.vqm # dualflexpress
 YYMMDD=`date +%Y%m%d`
 CXX   := g++
 FBDIR := .
@@ -113,6 +113,11 @@ design.h: main.v builddate.v
 
 $(VDIRFB)/V%__ALL.a: $(VDIRFB)/V%.mk
 	$(SUBMAKE) V$*.mk
+
+.PHONY: yosys
+yosys: toplevel.vqm
+toplevel.vqm: build.ys toplevel.v $(VFLIST)
+	yosys -ql build.yslog -s build.ys
 
 .PHONY:
 archive:

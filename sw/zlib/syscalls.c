@@ -294,7 +294,6 @@ _read_r(struct _reent *reent, int file, void *ptr, size_t len)
 		return nr;
 	}
 #endif
-	}
 	errno = ENOSYS;
 	return -1;
 }

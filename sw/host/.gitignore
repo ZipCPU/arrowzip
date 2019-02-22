@@ -3,3 +3,7 @@ zipload
 zipdbg
 netuart
 wbregs
+flashid
+flashscope
+flash.bin
+dumpflash

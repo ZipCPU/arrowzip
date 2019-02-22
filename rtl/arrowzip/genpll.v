@@ -33,9 +33,7 @@
 //refer to the applicable agreement for further details.
 
 
-// synopsys translate_off
 `timescale 1 ps / 1 ps
-// synopsys translate_on
 module genpll (
 	inclk0,
 	c0,
@@ -54,42 +52,49 @@ module genpll (
 	wire  sub_wire3 = inclk0;
 	wire [1:0] sub_wire4 = {sub_wire5, sub_wire3};
 
-	altpll	altpll_component (
+`ifdef	YOSYS
+`define	PLL	fiftyfivenm_pll
+`else
+`define	PLL	altpll
+`endif
+	`PLL	altpll_component (
 				.inclk (sub_wire4),
 				.clk (sub_wire0),
-				.activeclock (),
 				.areset (1'b0),
 				.clkbad (),
-				.clkena ({6{1'b1}}),
-				.clkloss (),
 				.clkswitch (1'b0),
 				.configupdate (1'b0),
-				.enable0 (),
-				.enable1 (),
-				.extclk (),
-				.extclkena ({4{1'b1}}),
 				.fbin (1'b1),
-				.fbmimicbidir (),
-				.fbout (),
-				.fref (),
-				.icdrclk (),
 				.locked (),
 				.pfdena (1'b1),
 				.phasecounterselect ({4{1'b1}}),
 				.phasedone (),
 				.phasestep (1'b1),
 				.phaseupdown (1'b1),
+`ifndef	YOSYS
+				.clkena ({6{1'b1}}),
+				.activeclock (),
+				.clkloss (),
+				.extclkena ({4{1'b1}}),
 				.pllena (1'b1),
 				.scanaclr (1'b0),
+				.fbmimicbidir (),
+				.fref (),
+				.icdrclk (),
+				.enable0 (),
+				.enable1 (),
+				.extclk (),
+				.fbout (),
+				.scandone (),
+				.scandataout (),
+				.sclkout0 (),
+				.sclkout1 (),
+				.scanread (1'b0),
+				.scanwrite (1'b0),
+`endif
 				.scanclk (1'b0),
 				.scanclkena (1'b1),
 				.scandata (1'b0),
-				.scandataout (),
-				.scandone (),
-				.scanread (1'b0),
-				.scanwrite (1'b0),
-				.sclkout0 (),
-				.sclkout1 (),
 				.vcooverrange (),
 				.vcounderrange ());
 	defparam
@@ -103,12 +108,9 @@ module genpll (
 		altpll_component.clk1_multiply_by = 20,
 		altpll_component.clk1_phase_shift = "9375",
 		altpll_component.compensate_clock = "CLK0",
-		altpll_component.inclk0_input_frequency = 83333,
+`ifndef	YOSYS
 		altpll_component.intended_device_family = "MAX 10",
 		altpll_component.lpm_hint = "CBX_MODULE_PREFIX=genpll",
-		altpll_component.lpm_type = "altpll",
-		altpll_component.operation_mode = "NORMAL",
-		altpll_component.pll_type = "AUTO",
 		altpll_component.port_activeclock = "PORT_UNUSED",
 		altpll_component.port_areset = "PORT_UNUSED",
 		altpll_component.port_clkbad0 = "PORT_UNUSED",
@@ -150,7 +152,12 @@ module genpll (
 		altpll_component.port_extclk1 = "PORT_UNUSED",
 		altpll_component.port_extclk2 = "PORT_UNUSED",
 		altpll_component.port_extclk3 = "PORT_UNUSED",
-		altpll_component.width_clock = 5;
+		altpll_component.lpm_type = "altpll",
+		altpll_component.operation_mode = "NORMAL",
+		altpll_component.pll_type = "AUTO",
+		altpll_component.width_clock = 5,
+`endif
+		altpll_component.inclk0_input_frequency = 83333;
 
 
 endmodule

@@ -60,6 +60,7 @@ SUBMAKE:= $(MAKE) --no-print-directory -C
 SOCDIR := rtl/arrowzip
 SIMDIR := sim/verilated
 ZIPSW  := sw/board
+LIBXSVG:= ../../ftdi/libxsvf/xsvftool-ft232
 
 #
 #
@@ -101,8 +102,8 @@ check-gpp:
 #
 .PHONY: datestamp
 datestamp: check-perl
-	@bash -c 'if [ ! -e $(YYMMDD)-build.v ]; then rm -f 20??????-build.v; perl mkdatev.pl > $(YYMMDD)-build.v; rm -f $(SOCDIR)/builddate.v; fi'
-	@bash -c 'if [ ! -e rtl/builddate.v ]; then cd $(SOCDIR); cp ../../$(YYMMDD)-build.v builddate.v; fi'
+	perl mkdatev.pl > $(YYMMDD)-build.v
+	cd $(SOCDIR); cp ../../$(YYMMDD)-build.v builddate.v
 
 #
 #
@@ -118,7 +119,7 @@ archive:
 #
 # Build our main (and toplevel) Verilog files via autofpga
 #
-.PHONY: autodata
+.PHONY: autodata datestamp
 autodata: check-autofpga
 	$(SUBMAKE) auto-data
 	$(MAKE) --no-print-directory --directory=auto-data
@@ -133,7 +134,7 @@ autodata: check-autofpga
 	$(call copyif-changed,auto-data/rtl.make.inc,$(SOCDIR)/make.inc)
 	$(call copyif-changed,auto-data/testb.h,$(SIMDIR)/testb.h)
 	$(call copyif-changed,auto-data/main_tb.cpp,$(SIMDIR)/main_tb.cpp)
-	# $(call copyif-changed,auto-data/iscachable.v,$(SOCDIR)/iscachable.v)
+	$(call copyif-changed,auto-data/iscachable.v,$(SOCDIR)/cpu/iscachable.v)
 
 #
 #
@@ -148,6 +149,11 @@ verilated: autodata datestamp check-verilator
 .PHONY: rtl
 rtl: verilated
 
+VENDOR=0x0403
+PRODUCT=0x6010
+DEVICE=-D i:$(VENDOR):$(PRODUCT)
+load:
+	echo "(sudo) $(LIBXSVG) $(DEVICE) -C A -s ../quartus/toplevel.svf"
 #
 #
 # Build a simulation of this entire design

@@ -45,13 +45,14 @@ all:
 CXX	:= g++
 OBJDIR	:= obj-pc
 RTLD	:= ../../rtl/arrowzip
-VOBJDR	:= $(RTLD)/obj_dirifneq ($(VERILATOR_ROOT),)
+VOBJDR	:= $(RTLD)/obj_dir
+ifneq ($(VERILATOR_ROOT),)
 VERILATOR:=$(VERILATOR_ROOT)/bin/verilator
 else
 VERILATOR_ROOT ?= $(shell bash -c 'verilator -V|grep VERILATOR_ROOT | head -1 | sed -e " s/^.*=\s*//"')
 endif
 export	$(VERILATOR)
-VROOT	:= $(VERILATOR_ROOT)
+VROOT   := $(VERILATOR_ROOT)
 VDEFS   := $(shell ./vversion.sh)
 VINCD   := $(VROOT)/include
 VINC	:= -I$(VINCD) -I$(VINCD)/vltstd -I$(VOBJDR)
@@ -60,7 +61,7 @@ CFLAGS	:= -Og -g -Wall $(INCS) $(VDEFS)
 #
 # A list of our sources and headers
 #
-SIMSOURCES:= qspiflashsim.cpp dbluartsim.cpp zipelf.cpp byteswap.cpp
+SIMSOURCES:= flashsim.cpp dbluartsim.cpp zipelf.cpp byteswap.cpp
 SIMOBJECTS:= $(addprefix $(OBJDIR)/,$(subst .cpp,.o,$(SIMSOURCES)))
 SIMHEADERS:= $(foreach header,$(subst .cpp,.h,$(SIMSOURCES)),$(wildcard $(header)))
 VOBJS   := $(OBJDIR)/verilated.o $(OBJDIR)/verilated_vcd_c.o
@@ -86,7 +87,7 @@ $(OBJDIR)/main_tb.o: automaster_tb.cpp
 	$(CXX) $(CFLAGS) $(INCS) -c $< -o $@
 
 VMAIN := $(VOBJDR)/Vmain__ALL.a
-MAINOBJS := $(OBJDIR)/main_tb.o $(OBJDIR)/automaster_tb.o
+MAINOBJS := $(OBJDIR)/main_tb.o
 main_tb: $(MAINOBJS) $(SIMOBJECTS) $(VOBJS) $(VMAIN)
 	$(CXX) $(VDEFS) $(CFLAGS) $^ $(VOBJDR)/Vmain__ALL.a -lelf -o $@
 

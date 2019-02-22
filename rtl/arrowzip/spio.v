@@ -93,7 +93,7 @@ module	spio(i_clk, i_wb_cyc, i_wb_stb, i_wb_we, i_wb_data, i_wb_sel,
 	always @(posedge i_clk)
 		last_btn <= o_btn[(NBTN-1):0];
 	always @(posedge i_clk)
-		o_int <= sw_int || (|((o_btn[(NBTN-1):0])&(~last_btn)));
+		o_int <= (|((o_btn[(NBTN-1):0])&(~last_btn)));
 
 	wire	[(NLEDS-1):0]	bounced;
 	ledbouncer	#(NLEDS, 25)

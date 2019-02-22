@@ -82,6 +82,7 @@
 	// Baudrate : @$BAUDRATE
 	// Clock    : @$(CLOCK.FREQUENCY)
 	localparam [23:0] BUSUART = @$SETUP;	// @$BAUDRATE baud
+	localparam 	 BAUDBITS = $clog2(BUSUART);
 @MAIN.DEFNS=
 	// UART interface
 	wire	[7:0]	@$(PREFIX)_rx_data, @$(PREFIX)_tx_data;
@@ -108,13 +109,13 @@
 @ZIP_DBGDATA.FORMAT= 0x%08x
 @MAIN.INSERT=
 	// The Host USB interface, to be used by the WB-UART bus
-	rxuartlite	#(BUSUART) rcv(@$(CLOCK.WIRE), i_uart_rx,
+	rxuartlite	#(BAUDBITS[4:0],BUSUART[BAUDBITS-1:0])
+			rcv(@$(CLOCK.WIRE), i_uart_rx,
 				@$(PREFIX)_rx_stb, @$(PREFIX)_rx_data);
-	txuartlite	#(BUSUART) txv(@$(CLOCK.WIRE),
-				@$(PREFIX)_tx_stb,
-				@$(PREFIX)_tx_data,
-				o_uart_tx,
-				@$(PREFIX)_tx_busy);
+	txuartlite	#(BAUDBITS[4:0],BUSUART[BAUDBITS-1:0])
+			txv(@$(CLOCK.WIRE),
+				@$(PREFIX)_tx_stb, @$(PREFIX)_tx_data,
+				o_uart_tx, @$(PREFIX)_tx_busy);
 
 `ifdef	INCLUDE_ZIPCPU
 `else
@@ -140,7 +141,6 @@
 @REGDEFS.H.DEFNS=
 #define	R_ZIPCTRL	@$.ZIP_ADDRESS
 #define	R_ZIPDATA	@$.ZIP_DBGDATA
-#define	RESET_ADDRESS	@$[0x%08x](RESET_ADDRESS)
 #define	BAUDRATE	@$[%d](BAUDRATE)
 @SIM.INCLUDE=
 #include "dbluartsim.h"
@@ -153,7 +153,7 @@
 		m_core->i_uart_rx = (*m_@$(PREFIX))(m_core->o_uart_tx);
 @SIM.CLOCK=clk
 @RTL.MAKE.GROUP= HBUART
-@RTL.MAKE.FILES= txuartlite.v rxuartlite.v ufifo.v
+@RTL.MAKE.FILES= ../common/txuartlite.v rxuartlite.v ufifo.v
 #
 #
 #

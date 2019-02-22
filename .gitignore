@@ -28,3 +28,4 @@ core
 *.ps
 *.yslog
 *.smt2
+*.vqm

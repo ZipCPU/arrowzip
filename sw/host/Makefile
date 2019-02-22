@@ -37,8 +37,8 @@
 ##
 ##
 .PHONY: all
-PROGRAMS := wbregs netuart zipload zipstate zipdbg
-SCOPES :=
+PROGRAMS := wbregs netuart zipload zipstate zipdbg dumpflash
+SCOPES := flashscope
 all: $(PROGRAMS) $(SCOPES)
 CXX := g++
 OBJDIR := obj-pc
@@ -76,6 +76,8 @@ zipstate: $(OBJDIR)/zipstate.o $(BUSOBJS)
 	$(CXX) $(CFLAGS) $^ $(LIBS) -o $@
 wbregs: $(OBJDIR)/wbregs.o $(BUSOBJS)
 	$(CXX) $(CFLAGS) $^ $(LIBS) -o $@
+dumpflash: $(OBJDIR)/dumpflash.o $(BUSOBJS)
+	$(CXX) $(CFLAGS) $^ $(LIBS) -o $@
 
 #
 # Programs that depend upon not just the bus objects, but the flash driver
@@ -87,6 +89,8 @@ zipload: $(OBJDIR)/zipload.o $(BUSOBJS) $(OBJDIR)/zipelf.o
 ## SCOPES
 # These depend upon the scopecls.o, the bus objects, as well as their
 # main file(s).
+flashscope: $(OBJDIR)/flashscope.o $(BUSOBJS) $(OBJDIR)/scopecls.o
+	$(CXX) $(CFLAGS) $^ $(LIBS) -o $@
 
 
 #

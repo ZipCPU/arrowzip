@@ -35,13 +35,12 @@
 ################################################################################
 ##
 ##
-@PREFIX= flash
+@PREFIX=flash
 @$LGFLASHSZ.EXPR=23
 @$NADDR=(1<<(@$LGFLASHSZ-2))
 @$NBYTES=(1<<@$LGFLASHSZ)
 @NBYTES.FORMAT=0x%08x
 @ACCESS= FLASH_ACCESS
-@ERROR.WIRE=@$(PREFIX)_err
 @SLAVE.TYPE=MEMORY
 @SLAVE.BUS=wb
 @LD.PERM=rx
@@ -54,11 +53,11 @@
 	output	wire		o_dspi_sck;
 	inout	wire	[1:0]	io_dspi_dat;
 @TOP.DEFNS=
-	wire	[1:0]	dspi_bmod, w_dspi_sck;
-	wire	[1:0]	dspi_dat;
+	wire		w_dspi_cs_n, w_dspi_sck;
+	wire	[1:0]	dspi_bmod, i_dspi_dat, dspi_datp, dspi_datn, o_dspi_dat;
 @TOP.MAIN=
 		// Dual SPI flash
-		o_dspi_cs_n, w_dspi_sck, dspi_dat, io_dspi_dat, dspi_bmod
+		w_dspi_cs_n, w_dspi_sck, o_dspi_dat, i_dspi_dat, dspi_bmod
 @TOP.INSERT=
 	//
 	//
@@ -69,33 +68,49 @@
 	//	0?	Normal serial mode, one bit in one bit out
 	//	10	Dual SPI mode, going out
 	//	11	Dual SPI mode coming from the device (read mode)
-	assign io_dspi_dat = (!dspi_bmod[1])?({1'bz,dspi_dat[0]})
-				:((dspi_bmod[0])?(2'bzz):(dspi_dat[1:0]));
-	altoddr dspi_ddr_sck(
+	altoddr dspi_ddr_csn(
 		.outclock(s_clk),
-		.din({ w_dspi_sck[1], w_dspi_sck[0] }),
+		.din({(2){ w_dspi_cs_n}}),
+		.pad_out(o_dspi_cs_n));
+	altoddr dspi_ddr_sck( .outclock(s_clk),
+		// .din({ !w_dspi_sck, 1'b1 }),
+		.din({(2){w_dspi_sck}}),
 		.pad_out(o_dspi_sck));
-
+	addrio	dspi_d0(.inclock(s_clk), .outclock(s_clk),
+			.dout({dspi_datp[0], dspi_datn[0]}),
+			.din({(2){o_dspi_dat[0]}}),
+			.pad_io(io_dspi_dat[0]),
+			.oe(!dspi_bmod[0]));
+	addrio	dspi_d1(.inclock(s_clk), .outclock(s_clk),
+			.dout({dspi_datp[1], dspi_datn[1]}),
+			.din({(2){o_dspi_dat[1]}}),
+			.pad_io(io_dspi_dat[1]),
+			.oe((dspi_bmod == 2'b10)?1'b1:1'b0));
+	assign	i_dspi_dat = dspi_datn;
 @MAIN.PORTLIST=
 		// The QSPI Flash
 		o_dspi_cs_n, o_dspi_sck, o_dspi_dat, i_dspi_dat, o_dspi_mod
 @MAIN.IODECL=
 	// The QSPI flash
 	output	wire		o_dspi_cs_n;
-	output	wire	[1:0]	o_dspi_sck;
+	output	wire		o_dspi_sck;
 	output	wire	[1:0]	o_dspi_dat;
 	input	wire	[1:0]	i_dspi_dat;
 	output	wire	[1:0]	o_dspi_mod;
+@MAIN.DEFNS=
+	wire		@$(PREFIX)_dbg_trigger;
+	wire	[31:0]	@$(PREFIX)_debug;
 @MAIN.INSERT=
-	dualflexpress @$(PREFIX)i(i_clk, i_reset,
+	dualflexpress #(.LGFLASHSZ(@$LGFLASHSZ), .OPT_CFG(1'b1), .RDDELAY(2),
+			.OPT_CLKDIV(1))
+		@$(PREFIX)i(i_clk, i_reset,
 			(wb_cyc), (wb_stb)&&(@$(PREFIX)_sel),
-				wb_addr[(@$LGFLASHSZ-3):0],
+				(wb_stb)&&(flash_cfg_sel), wb_we,
+				wb_addr[(@$LGFLASHSZ-3):0], wb_data[31:0],
 			@$(PREFIX)_ack, @$(PREFIX)_stall, @$(PREFIX)_data,
 			o_dspi_sck, o_dspi_cs_n, o_dspi_mod, o_dspi_dat,
 				i_dspi_dat,
-			((wb_stb)&&(flash_cfg_sel)), r_flash_cfg_data,
-			 	w_flash_cfg_data,
-			@$(PREFIX)_err);
+			@$(PREFIX)_dbg_trigger, @$(PREFIX)_debug);
 @MAIN.ALT=
 	assign	o_dspi_sck  = 1'b0;
 	assign	o_dspi_cs_n = 1'b1;
@@ -183,18 +198,13 @@ _@$(PREFIX)=ORIGIN(@$(PREFIX));
 #
 #
 @PREFIX=flash_cfg
-@SLAVE.TYPE=SINGLE
+@SLAVE.TYPE=OTHER
 @SLAVE.BUS=wb
 @NADDR=1
 @REGS.N=1
 @REGS.0= 0  R_FLASHCFG FLASHCFG
 @MAIN.DEFNS=
-	reg	[8:0]	r_flash_cfg_data;
-	wire	[9:0]	w_flash_cfg_data;
 @MAIN.INSERT=
-	always @(posedge i_clk)
-	if ((wb_stb)&&(@$(PREFIX)_sel))
-		r_flash_cfg_data <= wb_data[8:0];
-
-
-	assign	flash_cfg_data = { 22'h0, w_flash_cfg_data };
+	assign	@$(PREFIX)_data = 0;
+	assign	@$(PREFIX)_ack  = 0;
+	assign	@$(PREFIX)_stall  = 0;

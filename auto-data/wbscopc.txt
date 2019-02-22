@@ -1,10 +1,11 @@
 ################################################################################
 ##
-## Filename: 	rtclight.txt
+## Filename: 	scopc.txt
 ##
-## Project:	ArrowZip, a demonstration of the Arrow MAX1000 FPGA board
+## Project:	OpenArty, an entirely open SoC based upon the Arty platform
 ##
-## Purpose:	
+## Purpose:	A generic scope description, from which other internal wbscopes
+##		may depend upon
 ##
 ## Creator:	Dan Gisselquist, Ph.D.
 ##		Gisselquist Technology, LLC
@@ -35,45 +36,12 @@
 ################################################################################
 ##
 ##
-@PREFIX=rtc
-@DEVID=RTC
-@NADDR=8
-@SLAVE.TYPE=DOUBLE
-@SLAVE.BUS=wb
-@ACCESS=RTC_ACCESS
-@CLOCK.NAME=clk
-@CLKFREQHZ=@$(CLOCK.FREQUENCY)
-@$CLKSTEP=((1<<48)/@$(CLOCK.FREQUENCY))
-@INT.RTC.WIRE=rtc_int
-@INT.RTC.PIC=buspic
-@MAIN.DEFNS=
-	// Definitions in support of the GPS driven RTC
-	wire	rtc_ppd;
-	reg	r_rtc_ack;
-@MAIN.INSERT=
-	rtclight #(@$[32'h%x](CLKSTEP)) the@$(PREFIX)(i_clk, i_reset,
-		wb_cyc, (wb_stb)&&(@$(PREFIX)_sel), wb_we,
-			wb_addr[2:0],
-			wb_data, wb_sel,
-		@$(PREFIX)_stall, @$(PREFIX)_ack, @$(PREFIX)_data,
-		@$(PREFIX)_int, @$(PREFIX)_ppd);
-@MAIN.ALT=
-	assign	@$(PREFIX)_ppd = 1'b0;
-@REGS.NOTE= // RTC clock registers
-@REGS.N=4
-@REGS.0= 0 R_CLOCK	CLOCK
-@REGS.1= 1 R_TIMER	TIMER
-@REGS.2= 2 R_STOPWATCH	STOPWATCH
-@REGS.3= 3 R_CKALARM	ALARM CKALARM
-@BDEF.DEFN=
-typedef	struct	RTCLIGHT_S	{
-	unsigned	r_clock, r_stopwatch, r_timer, r_alarm;
-} RTCLIGHT;
-@BDEF.IONAME=_rtc
-@BDEF.IOTYPE=RTCLIGHT
-@BDEF.OSDEF=_BOARD_HAS_RTC
-@BDEF.OSVAL=static volatile @$BDEF.IOTYPE *const @$(BDEF.IONAME) = ((@$BDEF.IOTYPE *)@$[0x%08x](REGBASE));
-#
-#
-@RTL.MAKE.GROUPD=rtc
-@RTL.MAKE.FILES=rtclight.v rtcbare.v rtcalarm.v rtcstopwatch.v rtctimer.v
+@PREFIX=scopc
+@DEVID=SCOPC
+@ACCESS=@$(DEVID)_SCOPC
+@CORE=wbscopc
+@REGS.NOTE=// @$(PREFIX) compressed scope
+@RTL.MAKE.GROUP=SCOPC
+@TRIGGER=@$(TARGET)_debug[31]
+@DEBUG=@$(TARGET)_debug[30:0]
+@INCLUDEFILE=wbscope.txt
