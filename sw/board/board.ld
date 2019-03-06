@@ -69,19 +69,26 @@ _top_of_stack = ORIGIN(bkram) + LENGTH(bkram);
 /* LD.SCRIPT from zipmaster.txt */
 SECTIONS
 {
-       .rocode 0x00600000 : ALIGN(4) {
+	/*
+	 * This particular board has *very* little block RAM to work
+	 * with.  Therefore, we're going to place as much as we can
+	 * into the flash, and leave only our data structures in the
+	 * block RAM.
+	 */
+       .rocode 0x00800000 : ALIGN(4) {
                _boot_address = .;
                *(.start) *(.boot)
+               *(.text.startup)
+               *(.text*)
+               *(.rodata*) *(.strings)
+               *(COMMON)
        } > flash
        _kram_start = . ;
        _kram_end = . ;
        _ram_image_start = . ;
        .kernel : ALIGN_WITH_INPUT {
                *(.kernel)
-               *(.text.startup)
-               *(.text*)
-               *(.rodata*) *(.strings)
-               *(.data) *(COMMON)
+               *(.data)
                }> bkram AT> flash
        _ram_image_end = . ;
        .bss : ALIGN_WITH_INPUT {

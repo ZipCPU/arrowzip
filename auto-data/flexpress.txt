@@ -11,7 +11,7 @@
 ##
 ################################################################################
 ##
-## Copyright (C) 2017-2018, Gisselquist Technology, LLC
+## Copyright (C) 2017-2019, Gisselquist Technology, LLC
 ##
 ## This program is free software (firmware): you can redistribute it and/or
 ## modify it under the terms of  the GNU General Public License as published
@@ -36,11 +36,12 @@
 ##
 ##
 @PREFIX=flash
-@$LGFLASHSZ.EXPR=23
+@DEVID=FLASH
+@$LGFLASHSZ=23
 @$NADDR=(1<<(@$LGFLASHSZ-2))
 @$NBYTES=(1<<@$LGFLASHSZ)
 @NBYTES.FORMAT=0x%08x
-@ACCESS= FLASH_ACCESS
+@ACCESS=@$(DEVID)_ACCESS
 @SLAVE.TYPE=MEMORY
 @SLAVE.BUS=wb
 @LD.PERM=rx
@@ -88,7 +89,7 @@
 			.oe((dspi_bmod == 2'b10)?1'b1:1'b0));
 	assign	i_dspi_dat = dspi_datn;
 @MAIN.PORTLIST=
-		// The QSPI Flash
+		// The Universal DSPI Flash
 		o_dspi_cs_n, o_dspi_sck, o_dspi_dat, i_dspi_dat, o_dspi_mod
 @MAIN.IODECL=
 	// The QSPI flash
@@ -98,18 +99,23 @@
 	input	wire	[1:0]	i_dspi_dat;
 	output	wire	[1:0]	o_dspi_mod;
 @MAIN.DEFNS=
+	// Definitions for the @$(PREFIX) debug port
 	wire		@$(PREFIX)_dbg_trigger;
 	wire	[31:0]	@$(PREFIX)_debug;
 @MAIN.INSERT=
-	dualflexpress #(.LGFLASHSZ(@$LGFLASHSZ), .OPT_CFG(1'b1), .RDDELAY(2),
-			.OPT_CLKDIV(1))
+	dualflexpress #(.LGFLASHSZ(@$LGFLASHSZ),
+		.RDDELAY(2), .OPT_CLKDIV(1), .NDUMMY(4),
+`ifdef	FLASHCFG_ACCESS
+		.OPT_CFG(1'b1))
+`else
+		.OPT_CFG(1'b0))
+`endif
 		@$(PREFIX)i(i_clk, i_reset,
 			(wb_cyc), (wb_stb)&&(@$(PREFIX)_sel),
-				(wb_stb)&&(flash_cfg_sel), wb_we,
-				wb_addr[(@$LGFLASHSZ-3):0], wb_data[31:0],
+			(wb_stb)&&(flash_cfg_sel), wb_we,
+			wb_addr[(@$LGFLASHSZ-3):0], wb_data,
 			@$(PREFIX)_ack, @$(PREFIX)_stall, @$(PREFIX)_data,
-			o_dspi_sck, o_dspi_cs_n, o_dspi_mod, o_dspi_dat,
-				i_dspi_dat,
+			o_dspi_sck, o_dspi_cs_n, o_dspi_mod, o_dspi_dat, i_dspi_dat,
 			@$(PREFIX)_dbg_trigger, @$(PREFIX)_debug);
 @MAIN.ALT=
 	assign	o_dspi_sck  = 1'b0;
@@ -119,8 +125,8 @@
 @MEM.NAME= flash
 @MEM.ACCESS = rx
 @REGS.N= 1
-@DEVID=FLASH
 @REGDEFS.H.DEFNS=
+#define	DSPI_FLASH
 #define	@$(DEVID)BASE	@$[0x%08x](REGBASE)
 #define	@$(DEVID)LEN	@$NBYTES
 #define	@$(DEVID)LGLEN	@$LGFLASHSZ
@@ -133,78 +139,76 @@
 _@$(PREFIX)=ORIGIN(@$(PREFIX));
 @REGDEFS.H.INSERT=
 
-@SIM.INCLUDE+=
+@SIM.INCLUDE=
 #include "flashsim.h"
-@SIM.DEFNS+=
+@SIM.DEFNS=
 #ifdef	@$(ACCESS)
 	FLASHSIM	*m_@$(MEM.NAME);
 	unsigned	m_last_dspi_dat;
 #endif
-@SIM.INIT+=
+@SIM.INIT=
 #ifdef	@$(ACCESS)
 	m_@$(MEM.NAME) = new FLASHSIM(FLASHLGLEN);
 	m_last_dspi_dat = 15;
 #endif
-@SIM.TICK +=
+@SIM.TICK=
+#ifdef  @$(ACCESS)
+		m_core->i_dspi_dat = m_@$(MEM.NAME)->simtick(
+			m_core->o_dspi_cs_n,
+			m_core->o_dspi_sck,
+			m_core->o_dspi_dat,
+			(m_core->o_dspi_mod&1)|((m_core->o_dspi_mod&2)<<1));
+		m_core->i_dspi_dat &= 0x03;
+#endif // @$(ACCESS)
+@SIM.LOAD=
 #ifdef	@$(ACCESS)
-
-		int	idspi;
-		// The toplevel logic creates a one cycle/clock delay.  Emulate
-		// it here.
-		m_core->i_dspi_dat = m_last_dspi_dat;
-		if ((m_core->o_dspi_sck == 3)||(m_core->o_dspi_sck == 0)) {
-			idspi = (*m_@$(MEM.NAME))(m_core->o_dspi_cs_n,
-						m_core->o_dspi_sck&1,
-						m_core->o_dspi_dat);
-		} else {
-			idspi = (*m_@$(MEM.NAME))(m_core->o_dspi_cs_n,
-						(m_core->o_dspi_sck&2)?1:0,
-						m_core->o_dspi_dat);
-			idspi = (*m_@$(MEM.NAME))(m_core->o_dspi_cs_n,
-						(m_core->o_dspi_sck&1)?1:0,
-						m_core->o_dspi_dat);
-		}
-		if (m_core->o_dspi_mod&2) {
-			// If we are driving the lines, drive the inputs
-			// as well.
-			if (m_core->o_dspi_mod&1)
-				; // 2'b11	// Not driving any lines
-			else	// 2'b10
-				idspi = m_core->o_dspi_dat;
-		} else {
-			// 2'b0x
-			//
-			// Turn on top two bits (unused in SPI mode)
-			idspi |= 0xc;
-			// Replace bottom bit with o_dspi_dat[0]
-			idspi &= 0xe; // Turn off bottom bit
-			idspi |= m_core->o_dspi_dat&1;
-		}
-		m_last_dspi_dat = idspi;
-
-		m_core->i_dspi_dat = (*m_@$(MEM.NAME))(m_core->o_dspi_cs_n,
-			m_core->o_dspi_sck, m_core->o_dspi_dat);
-#endif
-@SIM.LOAD +=
 			m_@$(MEM.NAME)->load(start, &buf[offset], wlen);
-#
-#
-#
-#
-#
-@RTL.MAKE.GROUP= FLASH
-@RTL.MAKE.FILES= dualflexpress.v
-#
-#
-#
-@PREFIX=flash_cfg
+#endif // @$(ACCESS)
+##
+##
+##
+##
+## Now the control interface
+@PREFIX=flashcfg
+@NADDR=1
+@DEVID=FLASHCFG
+@ACCESS=@$(DEVID)_ACCESS
+@DEPENDS= FLASH_ACCESS
+## Although this is really a SLAVE.TYPE=SINGLE interface, it receives its
+## acknowledgements from the flash above.  SLAVE.TYPE=SINGLE will create
+## acknowledgements in the interconnect, resulting in bus errors.  As a result,
+## this must be a SLAVE.TYPE=OTHER
+##
 @SLAVE.TYPE=OTHER
 @SLAVE.BUS=wb
-@NADDR=1
-@REGS.N=1
-@REGS.0= 0  R_FLASHCFG FLASHCFG
-@MAIN.DEFNS=
 @MAIN.INSERT=
-	assign	@$(PREFIX)_data = 0;
-	assign	@$(PREFIX)_ack  = 0;
-	assign	@$(PREFIX)_stall  = 0;
+	// The Flash control interface result comes back together with the
+	// flash interface itself.  Hence, we always return zero here.
+	assign	@$(PREFIX)_ack   = 1'b0;
+	assign	@$(PREFIX)_stall = 1'b0;
+	assign	@$(PREFIX)_data  = 0;
+@REGS.NOTE= // FLASH erase/program configuration registers
+@REGS.N= 1
+@REGS.0= 0 R_@$(DEVID) @$(DEVID) QSPIC
+@REGDEFS.H.INSERT=
+// Flash control constants
+#define	DSPI_FLASH	// This core and hardware support a Dual SPI flash
+#define	SZPAGEB		256
+#define	PGLENB		256
+#define	SZPAGEW		64
+#define	PGLENW		64
+#define	NPAGES		256
+#define	SECTORSZB	(NPAGES * SZPAGEB)	// In bytes, not words!!
+#define	SECTORSZW	(NPAGES * SZPAGEW)	// In words
+#define	NSECTORS	64
+#define	SECTOROF(A)	((A) & (-1<<16))
+#define	SUBSECTOROF(A)	((A) & (-1<<12))
+#define	PAGEOF(A)	((A) & (-1<<8))
+
+@BDEF.IONAME= _@$(PREFIX)
+@BDEF.OSDEF= _BOARD_HAS_@$(DEVID)
+@BDEF.IOTYPE=unsigned
+@BDEF.OSVAL=static volatile @$(BDEF.IOTYPE) * const @$(BDEF.IONAME) = ((@$BDEF.IOTYPE *)(@$[0x%08x](REGBASE)));
+##
+@RTL.MAKE.GROUP= FLASH
+@RTL.MAKE.FILES= dualflexpress.v

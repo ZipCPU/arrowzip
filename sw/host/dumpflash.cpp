@@ -2,7 +2,7 @@
 //
 // Filename:	dumpflash.cpp
 //
-// Project:	OpenArty, an entirely open SoC based upon the Arty platform
+// Project:	ArrowZip, a demonstration of the Arrow MAX1000 FPGA board
 //
 // Purpose:	Read/Empty the entire contents of the flash memory to a file.
 //		The flash is unchanged by this process.

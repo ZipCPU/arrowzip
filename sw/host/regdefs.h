@@ -55,7 +55,8 @@
 //
 // Register address definitions, from @REGS.#d
 //
-#define	R_FLASHCFG      	0x00100000	// 00100000, wbregs names: FLASHCFG
+// FLASH erase/program configuration registers
+#define	R_FLASHCFG      	0x00100000	// 00100000, wbregs names: FLASHCFG, QSPIC
 // flashdbg compressed scope
 #define	R_FLASHSCOPE    	0x00200000	// 00200000, wbregs names: FLASHSCOPE
 #define	R_FLASHSCOPED   	0x00200004	// 00200000, wbregs names: FLASHSCOPED
@@ -108,6 +109,7 @@
 // @REGDEFS.H.DEFNS for peripherals
 #define	BKRAMBASE	0x00600000
 #define	BKRAMLEN	0x00001000
+#define	DSPI_FLASH
 #define	FLASHBASE	0x00800000
 #define	FLASHLEN	0x00800000
 #define	FLASHLGLEN	23
@@ -134,10 +136,24 @@
 #define	CPU_uCC		0x001e
 #define	CPU_uPC		0x001f
 
-#define	RESET_ADDRESS	0x00600000
+#define	RESET_ADDRESS	0x00800000
 
 
 // @REGDEFS.H.INSERT for peripherals
+
+// Flash control constants
+#define	DSPI_FLASH	// This core and hardware support a Dual SPI flash
+#define	SZPAGEB		256
+#define	PGLENB		256
+#define	SZPAGEW		64
+#define	PGLENW		64
+#define	NPAGES		256
+#define	SECTORSZB	(NPAGES * SZPAGEB)	// In bytes, not words!!
+#define	SECTORSZW	(NPAGES * SZPAGEW)	// In words
+#define	NSECTORS	64
+#define	SECTOROF(A)	((A) & (-1<<16))
+#define	SUBSECTOROF(A)	((A) & (-1<<12))
+#define	PAGEOF(A)	((A) & (-1<<8))
 
 // @REGDEFS.H.INSERT from the top level
 typedef	struct {

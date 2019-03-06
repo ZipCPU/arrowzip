@@ -302,7 +302,8 @@ module	console(i_clk, i_rst,
 		assign	o_console_stb  = txf_wb_write;
 		assign	o_console_data = txf_wb_data;
 		assign	tx_empty_n     = o_console_stb;
-		assign	txf_status     = { 13'h0, {(3){txf_wb_write}} };
+		assign	txf_status     = { 13'h0, {(2){txf_wb_write}},
+				!txf_wb_write };
 	end endgenerate
 
 	// Now that we are done with the chain, pick some wires for the user

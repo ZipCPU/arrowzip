@@ -12,7 +12,7 @@
 ##
 ################################################################################
 ##
-## Copyright (C) 2015-2018, Gisselquist Technology, LLC
+## Copyright (C) 2015-2019, Gisselquist Technology, LLC
 ##
 ## This program is free software (firmware): you can redistribute it and/or
 ## modify it under the terms of  the GNU General Public License as published
@@ -37,13 +37,13 @@
 ##
 ##
 .PHONY: all
-PROGRAMS := wbregs netuart zipload zipstate zipdbg dumpflash
+PROGRAMS := wbregs netuart zipload zipstate zipdbg dumpflash flashid
 SCOPES := flashscope
 all: $(PROGRAMS) $(SCOPES)
 CXX := g++
 OBJDIR := obj-pc
 BUSSRCS := hexbus.cpp llcomms.cpp regdefs.cpp byteswap.cpp
-SOURCES := wbregs.cpp netuart.cpp		\
+SOURCES := wbregs.cpp netuart.cpp flashdrvr.cpp		\
 	 $(BUSSRCS) zipload.cpp zipstate.cpp zipdbg.cpp
 	# flashdrvr.cpp
 HEADERS := llcomms.h port.h hexbus.h devbus.h
@@ -82,7 +82,9 @@ dumpflash: $(OBJDIR)/dumpflash.o $(BUSOBJS)
 #
 # Programs that depend upon not just the bus objects, but the flash driver
 # as well.
-zipload: $(OBJDIR)/zipload.o $(BUSOBJS) $(OBJDIR)/zipelf.o
+flashid: $(OBJDIR)/flashid.o $(BUSOBJS) $(OBJDIR)/flashdrvr.o
+	$(CXX) -g $^ -lelf -o $@
+zipload: $(OBJDIR)/zipload.o $(BUSOBJS) $(OBJDIR)/flashdrvr.o $(OBJDIR)/zipelf.o
 	$(CXX) -g $^ -lelf -o $@
 
 

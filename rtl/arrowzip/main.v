@@ -87,6 +87,9 @@
 // `endif // MUST_HAVE_A
 //
 `ifdef	FLASH_ACCESS
+`define	FLASHCFG_ACCESS
+`endif
+`ifdef	FLASH_ACCESS
 `define	FLASHSCOPE_SCOPC
 `endif
 //
@@ -104,7 +107,7 @@
 module	main(i_clk, i_reset,
 		// SPIO interface
 		i_btn, o_led,
-		// The QSPI Flash
+		// The Universal DSPI Flash
 		o_dspi_cs_n, o_dspi_sck, o_dspi_dat, i_dspi_dat, o_dspi_mod,
 		// UART/host to wishbone interface
 		i_uart_rx, o_uart_tx, o_hb_err);
@@ -122,7 +125,7 @@ module	main(i_clk, i_reset,
 	//
 	// A 32-bit address indicating where the ZipCPU should start running
 	// from
-	localparam	RESET_ADDRESS = 6291456;
+	localparam	RESET_ADDRESS = 8388608;
 	//
 	// The number of valid bits on the bus
 	localparam	ZIP_ADDRESS_WIDTH = 22; // Zip-CPU address width
@@ -208,6 +211,7 @@ module	main(i_clk, i_reset,
 	// A reset wire for the ZipCPU
 	wire		cpu_reset;
 	reg	[22-1:0]	r_buserr_addr;
+	// Definitions for the flash debug port
 	wire		flash_dbg_trigger;
 	wire	[31:0]	flash_debug;
 	// UART interface
@@ -300,9 +304,9 @@ module	main(i_clk, i_reset,
 	wire		rtc_sel, rtc_ack, rtc_stall;
 	wire	[31:0]	rtc_data;
 
-	// Wishbone slave definitions for bus wb, slave flash_cfg
-	wire		flash_cfg_sel, flash_cfg_ack, flash_cfg_stall;
-	wire	[31:0]	flash_cfg_data;
+	// Wishbone slave definitions for bus wb, slave flashcfg
+	wire		flashcfg_sel, flashcfg_ack, flashcfg_stall;
+	wire	[31:0]	flashcfg_data;
 
 	// Wishbone slave definitions for bus wb, slave flashdbg
 	wire		flashdbg_sel, flashdbg_ack, flashdbg_stall;
@@ -394,7 +398,7 @@ module	main(i_clk, i_reset,
  // 0x000020
 	assign	         rtc_sel = ((wb_dio_sel)&&((wb_addr[ 4: 3] &  2'h3) ==  2'h2));
  // 0x000040 - 0x00005f
-	assign	   flash_cfg_sel = ((wb_addr[21:18] &  4'hf) ==  4'h1); // 0x100000
+	assign	    flashcfg_sel = ((wb_addr[21:18] &  4'hf) ==  4'h1); // 0x100000
 	assign	    flashdbg_sel = ((wb_addr[21:18] &  4'hf) ==  4'h2); // 0x200000 - 0x200007
 	assign	     console_sel = ((wb_addr[21:18] &  4'hf) ==  4'h3); // 0x300000 - 0x30000f
 	assign	      wb_sio_sel = ((wb_addr[21:18] &  4'hf) ==  4'h4); // 0x400000 - 0x40001f
@@ -437,7 +441,7 @@ module	main(i_clk, i_reset,
 	// BUS-LOGIC for wb
 	//
 	assign	wb_none_sel = (wb_stb)&&({
-				flash_cfg_sel,
+				flashcfg_sel,
 				flashdbg_sel,
 				console_sel,
 				wb_sio_sel,
@@ -461,7 +465,7 @@ module	main(i_clk, i_reset,
 	// immediately one after the other.
 	//
 	always @(posedge i_clk)
-		case({		flash_cfg_ack,
+		case({		flashcfg_ack,
 				flashdbg_ack,
 				console_ack,
 				wb_sio_ack,
@@ -533,7 +537,7 @@ module	main(i_clk, i_reset,
 	// respectively, which will appear ahead of any other device acks.
 	//
 	always @(posedge i_clk)
-		wb_ack <= (wb_cyc)&&(|{ flash_cfg_ack,
+		wb_ack <= (wb_cyc)&&(|{ flashcfg_ack,
 				flashdbg_ack,
 				console_ack,
 				wb_sio_ack,
@@ -557,13 +561,13 @@ module	main(i_clk, i_reset,
 	//
 	always @(posedge i_clk)
 	begin
-		casez({		flash_cfg_ack,
+		casez({		flashcfg_ack,
 				flashdbg_ack,
 				console_ack,
 				wb_sio_ack,
 				wb_dio_ack,
 				bkram_ack	})
-			6'b1?????: wb_idata <= flash_cfg_data;
+			6'b1?????: wb_idata <= flashcfg_data;
 			6'b01????: wb_idata <= flashdbg_data;
 			6'b001???: wb_idata <= console_data;
 			6'b0001??: wb_idata <= wb_sio_data;
@@ -572,7 +576,7 @@ module	main(i_clk, i_reset,
 			default: wb_idata <= flash_data;
 		endcase
 	end
-	assign	wb_stall =	((flash_cfg_sel)&&(flash_cfg_stall))
+	assign	wb_stall =	((flashcfg_sel)&&(flashcfg_stall))
 				||((flashdbg_sel)&&(flashdbg_stall))
 				||((console_sel)&&(console_stall))
 				||((wb_sio_sel)&&(wb_sio_stall))
@@ -753,9 +757,6 @@ module	main(i_clk, i_reset,
 
 `endif	// WATCHDOG_ACCESS
 
-	assign	flash_cfg_data = 0;
-	assign	flash_cfg_ack  = 0;
-	assign	flash_cfg_stall  = 0;
 `ifdef	BUSCONSOLE_ACCESS
 	console consolei(i_clk, 1'b0,
  			wb_cyc, (wb_stb)&&(console_sel), wb_we,
@@ -900,15 +901,19 @@ module	main(i_clk, i_reset,
 	assign	buserr_data = { {(32-2-22){1'b0}},
 			r_buserr_addr, 2'b00 };
 `ifdef	FLASH_ACCESS
-	dualflexpress #(.LGFLASHSZ(23), .OPT_CFG(1'b1), .RDDELAY(2),
-			.OPT_CLKDIV(1))
+	dualflexpress #(.LGFLASHSZ(23),
+		.RDDELAY(2), .OPT_CLKDIV(1), .NDUMMY(4),
+`ifdef	FLASHCFG_ACCESS
+		.OPT_CFG(1'b1))
+`else
+		.OPT_CFG(1'b0))
+`endif
 		flashi(i_clk, i_reset,
 			(wb_cyc), (wb_stb)&&(flash_sel),
-				(wb_stb)&&(flash_cfg_sel), wb_we,
-				wb_addr[(23-3):0], wb_data[31:0],
+			(wb_stb)&&(flash_cfg_sel), wb_we,
+			wb_addr[(23-3):0], wb_data,
 			flash_ack, flash_stall, flash_data,
-			o_dspi_sck, o_dspi_cs_n, o_dspi_mod, o_dspi_dat,
-				i_dspi_dat,
+			o_dspi_sck, o_dspi_cs_n, o_dspi_mod, o_dspi_dat, i_dspi_dat,
 			flash_dbg_trigger, flash_debug);
 `else	// FLASH_ACCESS
 	assign	o_dspi_sck  = 1'b0;
@@ -1081,6 +1086,24 @@ module	main(i_clk, i_reset,
 
 	assign	bustimer_int = 1'b0;	// bustimer.INT.BUSTIMER.WIRE
 `endif	// BUSTIMER_ACCESS
+
+`ifdef	FLASHCFG_ACCESS
+	// The Flash control interface result comes back together with the
+	// flash interface itself.  Hence, we always return zero here.
+	assign	flashcfg_ack   = 1'b0;
+	assign	flashcfg_stall = 1'b0;
+	assign	flashcfg_data  = 0;
+`else	// FLASHCFG_ACCESS
+
+	// In the case that there is no flashcfg peripheral responding on the wb bus
+	reg	r_flashcfg_ack;
+	initial	r_flashcfg_ack = 1'b0;
+	always @(posedge i_clk)	r_flashcfg_ack <= (wb_stb)&&(flashcfg_sel);
+	assign	flashcfg_ack   = r_flashcfg_ack;
+	assign	flashcfg_stall = 0;
+	assign	flashcfg_data  = 0;
+
+`endif	// FLASHCFG_ACCESS
 
 	assign	version_data = `DATESTAMP;
 	assign	version_ack = wb_stb && version_sel;

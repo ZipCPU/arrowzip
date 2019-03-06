@@ -2,7 +2,7 @@
 //
 // Filename:	dualflexpress.v
 //
-// Project:	A Set of Wishbone Controlled SPI Flash Controllers
+// Project:	ArrowZip, a demonstration of the Arrow MAX1000 FPGA board
 //
 // Purpose:	To provide wishbone controlled read access (and read access
 //		*only*) to the DSPI flash, using a flash clock equal to the
@@ -45,26 +45,23 @@
 //
 // Copyright (C) 2018-2019, Gisselquist Technology, LLC
 //
-// This file is part of the set of Wishbone controlled SPI flash controllers
-// project
+// This program is free software (firmware): you can redistribute it and/or
+// modify it under the terms of  the GNU General Public License as published
+// by the Free Software Foundation, either version 3 of the License, or (at
+// your option) any later version.
 //
-// The Wishbone SPI flash controller project is free software (firmware):
-// you can redistribute it and/or modify it under the terms of the GNU Lesser
-// General Public License as published by the Free Software Foundation, either
-// version 3 of the License, or (at your option) any later version.
+// This program is distributed in the hope that it will be useful, but WITHOUT
+// ANY WARRANTY; without even the implied warranty of MERCHANTIBILITY or
+// FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+// for more details.
 //
-// The Wishbone SPI flash controller project is distributed in the hope
-// that it will be useful, but WITHOUT ANY WARRANTY; without even the implied
-// warranty of MERCHANTIBILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU Lesser General Public License for more details.
-//
-// You should have received a copy of the GNU Lesser General Public License
-// along with this program.  (It's in the $(ROOT)/doc directory.  Run make
-// with no target there if the PDF file isn't present.)  If not, see
+// You should have received a copy of the GNU General Public License along
+// with this program.  (It's in the $(ROOT)/doc directory.  Run make with no
+// target there if the PDF file isn't present.)  If not, see
 // <http://www.gnu.org/licenses/> for a copy.
 //
-// License:	LGPL, v3, as defined and found on www.gnu.org,
-//		http://www.gnu.org/licenses/lgpl.html
+// License:	GPL, v3, as defined and found on www.gnu.org,
+//		http://www.gnu.org/licenses/gpl.html
 //
 //
 ////////////////////////////////////////////////////////////////////////////////
@@ -98,7 +95,7 @@ module	dualflexpress(i_clk, i_reset,
 	parameter [0:0]	OPT_CFG     = 1'b1;
 	//
 	// OPT_STARTUP enables the startup logic
-	parameter [0:0]	OPT_STARTUP = 1'b0;
+	parameter [0:0]	OPT_STARTUP = 1'b1;
 	//
 	parameter	OPT_CLKDIV = 0;
 	//
@@ -119,11 +116,17 @@ module	dualflexpress(i_clk, i_reset,
 	//
 	// RDDELAY is the number of clock cycles from when o_dspi_dat is valid
 	// until i_dspi_dat is valid.  Read delays from 0-4 have been verified
+	// DDR Registered I/O on a Xilinx device can be done with a RDDELAY=3
+	//	On Intel/Altera devices, RDDELAY=2 works
+	//	I'm using RDDELAY=0 for my iCE40 devices
+	//
 	parameter	RDDELAY = 0;
 	//
 	// NDUMMY is the number of "dummy" clock cycles between the 24-bits of
 	// the Quad I/O address and the first data bits.  This includes the
-	// two clocks of the Quad output mode byte, 0xa0
+	// two clocks of the Quad output mode byte, 0xa0.  The default is 10
+	// for a Micron device.  Windbond seems to want 2.  Note your flash
+	// device carefully when you choose this value.
 	// 
 	parameter	NDUMMY = 8;
 	//
@@ -200,15 +203,42 @@ module	dualflexpress(i_clk, i_reset,
 	assign	cfg_ls_write = (cfg_write)&&(!i_wb_data[DSPEED_BIT]);
 
 
-	wire	ckstb, ckpos, ckneg, ckpre;
+	reg	ckstb, ckpos, ckneg, ckpre;
 
 	generate if (OPT_ODDR)
 	begin
 
-		assign	ckstb = 1'b1;
-		assign	ckpos = 1'b1;
-		assign	ckneg = 1'b1;
-		assign	ckpre = 1'b1;
+		always @(*)
+		begin
+			ckstb = 1'b1;
+			ckpos = 1'b1;
+			ckneg = 1'b1;
+			ckpre = 1'b1;
+		end
+
+	end else if (OPT_CLKDIV == 1)
+	begin : CKSTB_ONE
+
+		reg	clk_counter;
+
+		initial	clk_counter = 1'b1;
+		always @(posedge i_clk)
+		if (i_reset)
+			clk_counter <= 1'b1;
+		else if (clk_counter != 0)
+			clk_counter <= 1'b0;
+		else if (bus_request)
+			clk_counter <= (pipe_req);
+		else if ((maintenance)||(!o_dspi_cs_n && o_wb_stall))
+			clk_counter <= 1'b1;
+
+		always @(*)
+		begin
+			ckpre = (clk_counter == 1);
+			ckstb = (clk_counter == 0);
+			ckpos = (clk_counter == 1);
+			ckneg = (clk_counter == 0);
+		end
 
 	end else begin : CKSTB_GEN
 
@@ -225,11 +255,24 @@ module	dualflexpress(i_clk, i_reset,
 		else if ((maintenance)||(!o_dspi_cs_n && o_wb_stall))
 			clk_counter <= OPT_CLKDIV;
 
-		assign	ckpre = (clk_counter == 1);
-		assign	ckstb = (clk_counter == 0);
-		assign	ckpos = (clk_counter == (OPT_CLKDIV+1)/2);
-		assign	ckneg = (clk_counter == 0);
+		initial	ckpre = (OPT_CLKDIV == 1);
+		initial	ckstb = 1'b0;
+		initial	ckpos = (OPT_CLKDIV == 1);
+		always @(posedge i_clk)
+		if (i_reset)
+		begin
+			ckpre <= (OPT_CLKDIV == 1);
+			ckstb <= 1'b0;
+			ckpos <= (OPT_CLKDIV == 1);
+		end else // if (OPT_CLKDIV > 1)
+		begin
+			ckpre <= (clk_counter == 2);
+			ckstb <= (clk_counter == 1);
+			ckpos <= (clk_counter == (OPT_CLKDIV+1)/2+1);
+		end
 
+		always @(*)
+			ckneg = ckstb;
 `ifdef	FORMAL
 		always @(*)
 			assert(!ckpos || !ckneg);
@@ -267,8 +310,8 @@ module	dualflexpress(i_clk, i_reset,
 
 		reg	[M_WAITBIT-1:0]	m_counter;
 		reg			m_midcount;
-		reg	[2:0]		m_bitcount;
-		reg	[6:0]		m_byte;
+		reg	[3:0]		m_bitcount;
+		reg	[7:0]		m_byte;
 
 		// Let's script our startup with a series of commands.
 		//
@@ -327,11 +370,11 @@ module	dualflexpress(i_clk, i_reset,
 		// 0xeb
 		m_cmd_word[5'h13] = { 1'b0, NORMAL_SPI, DIO_READ_CMD };
 		// Addr #1
-		m_cmd_word[5'h14] = { 1'b0, DUAL_WRITE, 8'h00 };
+		m_cmd_word[5'h14] = { 1'b0, DUAL_WRITE, 8'h01 };
 		// Addr #2
-		m_cmd_word[5'h15] = { 1'b0, DUAL_WRITE, 8'h00 };
+		m_cmd_word[5'h15] = { 1'b0, DUAL_WRITE, 8'h20 };
 		// Addr #3
-		m_cmd_word[5'h16] = { 1'b0, DUAL_WRITE, 8'h00 };
+		m_cmd_word[5'h16] = { 1'b0, DUAL_WRITE, 8'h48 };
 		// Mode byte
 		m_cmd_word[5'h17] = { 1'b0, DUAL_WRITE, 8'ha0 };
 		// Dummy clocks, x10 for this flash
@@ -350,8 +393,9 @@ module	dualflexpress(i_clk, i_reset,
 
 		reg	m_final;
 
-		wire	m_ce;
+		wire	m_ce, new_word;
 		assign	m_ce = (!m_midcount)&&(ckstb);
+		assign	new_word = (m_ce && m_bitcount == 0);
 
 		//
 		initial	maintenance = 1'b1;
@@ -361,7 +405,7 @@ module	dualflexpress(i_clk, i_reset,
 		begin
 			m_cmd_index <= M_FIRSTIDX;
 			maintenance <= 1'b1;
-		end else if (m_ce && m_bitcount == 0)
+		end else if (new_word)
 		begin
 			maintenance <= (maintenance)&&(!m_final);
 			m_cmd_index <= m_cmd_index + 1'b1;
@@ -369,14 +413,14 @@ module	dualflexpress(i_clk, i_reset,
 
 		initial	m_this_word = -1;
 		always @(posedge i_clk)
-		if (m_ce && m_bitcount == 0)
+		if (new_word)
 			m_this_word <= m_cmd_word[m_cmd_index];
 
 		initial	m_final = 1'b0;
 		always @(posedge i_clk)
 		if (i_reset)
 			m_final <= 1'b0;
-		else if (m_ce && m_bitcount == 0)
+		else if (new_word)
 			m_final <= (&m_cmd_index);
 
 		//
@@ -393,7 +437,7 @@ module	dualflexpress(i_clk, i_reset,
 `else
 			m_counter <= -1;
 `endif
-		end else if (m_ce && m_bitcount == 0)
+		end else if (new_word)
 		begin
 			m_midcount <= m_this_word[M_WAITBIT]
 					&& (|m_this_word[M_WAITBIT-1:0]);
@@ -436,34 +480,40 @@ module	dualflexpress(i_clk, i_reset,
 			end else begin
 				m_cs_n <= 1'b0;
 				m_mod  <= m_this_word[M_WAITBIT-1:M_WAITBIT-2];
-				m_bitcount <= 3'h1;
+				m_bitcount <= (!OPT_ODDR && m_cs_n) ? 4'h4 : 4'h3;
 				if (!m_this_word[M_WAITBIT-1])
-					m_bitcount <= m_bitcount - 1;//i.e.7
+					m_bitcount <= (!OPT_ODDR && m_cs_n) ? 4'h8 : 4'h7;//i.e.7
 			end
 		end
 
 		always @(posedge i_clk)
-		if (ckstb)
+		if (m_ce)
 		begin
 			if (m_bitcount == 0)
 			begin
-				m_dat <= m_this_word[7:6];
-				m_byte <= { m_this_word[3:0],m_this_word[2:0]};
-				if (!m_this_word[M_WAITBIT-1])
+				if (!OPT_ODDR && m_cs_n)
 				begin
-					// Slow speed
-					m_dat[0]  <= m_this_word[7];
-					m_byte <= m_this_word[6:0];
+					m_dat <= {(2){m_this_word[7]}};
+					m_byte <= m_this_word[7:0];
+				end else begin
+					m_dat <= m_this_word[7:6];
+					m_byte <= { m_this_word[5:0],2'b00};
+					if (!m_this_word[M_WAITBIT-1])
+					begin
+						// Slow speed
+						m_dat[0]  <= m_this_word[7];
+						m_byte <= {m_this_word[6:0],1'b0};
+					end
 				end
 			end else begin
-				m_dat <= m_byte[6:5];
+				m_dat <= m_byte[7:6];
 				if (!m_mod[1])
 				begin
 					// Slow speed
-					m_dat[0] <= m_byte[6];
-					m_byte <= { m_byte[5:0], m_this_word[0] };
+					m_dat[0] <= m_byte[7];
+					m_byte <= { m_byte[6:0], 1'b0 };
 				end else begin
-					m_byte <= { m_byte[4:0], m_this_word[1:0] };
+					m_byte <= { m_byte[5:0], 2'b00 };
 				end
 			end
 		end
@@ -477,9 +527,14 @@ module	dualflexpress(i_clk, i_reset,
 			always @(posedge i_clk)
 			if (i_reset)
 				m_clk <= 1'b1;
+			else if (!OPT_ODDR && m_cs_n)
+				m_clk <= 1'b1;
 			else if ((!m_clk)&&(ckpos))
 				m_clk <= 1'b1;
-			else if ((m_midcount)||(m_this_word[M_WAITBIT]))
+			else if (m_midcount)
+				m_clk <= 1'b1;
+			else if (m_ce && m_bitcount == 0
+					&& m_this_word[M_WAITBIT])
 				m_clk <= 1'b1;
 			else if (ckneg)
 				m_clk <= 1'b0;
@@ -511,6 +566,8 @@ module	dualflexpress(i_clk, i_reset,
 				assert(m_this_word[M_WAITBIT-3:0] > 0);
 		end
 
+		// Setting the last two command words to IDLE with maximum
+		// counts is required by our implementation
 		always @(*)
 			assert(m_cmd_word[5'h1e] == 11'h7ff);
 		always @(*)
@@ -593,6 +650,7 @@ module	dualflexpress(i_clk, i_reset,
 	reg	[32+2*(OPT_ODDR ? 0:1)-1:0]	data_pipe;
 	reg	pre_ack = 1'b0;
 	reg	actual_sck;
+
 	//
 	//
 	// Data / access portion
@@ -627,7 +685,7 @@ module	dualflexpress(i_clk, i_reset,
 			data_pipe <= { data_pipe[(32+2*((OPT_ODDR ? 0:1)-1))-1:0], 2'h0 };
 
 		if (maintenance)
-			data_pipe[31:30] <= m_dat;
+			data_pipe[30+2*(OPT_ODDR ? 0:1) +: 2] <= m_dat;
 	end
 
 	assign	o_dspi_dat = data_pipe[30+2*(OPT_ODDR ? 0:1) +: 2];
@@ -652,7 +710,7 @@ module	dualflexpress(i_clk, i_reset,
 		if (!o_wb_stall)
 			next_addr <= i_wb_addr + 1'b1;
 
-		assign	w_pipe_condition = (i_wb_stb)&&(pre_ack)
+		assign	w_pipe_condition = (i_wb_stb)&&(!i_wb_we)&&(pre_ack)
 				&&(!maintenance)
 				&&(!cfg_mode)
 				&&(!o_dspi_cs_n)
@@ -693,6 +751,8 @@ module	dualflexpress(i_clk, i_reset,
 		o_dspi_sck <= (!OPT_ODDR);
 	else if (maintenance)
 		o_dspi_sck <= m_clk;
+	else if ((!OPT_ODDR)&&(bus_request)&&(pipe_req))
+		o_dspi_sck <= 1'b0;
 	else if ((bus_request)||(cfg_write))
 		o_dspi_sck <= 1'b1;
 	else if (OPT_ODDR)
@@ -792,11 +852,32 @@ module	dualflexpress(i_clk, i_reset,
 	else
 		dly_ack <= 1'b0;
 
-	always @(*)
-	if (OPT_ODDR)
-		actual_sck = (o_dspi_sck);
-	else
-		actual_sck = (o_dspi_sck)&&(ckneg)&&(clk_ctr != 0);
+	generate if (OPT_ODDR)
+	begin : SCK_ACTUAL
+
+		always @(*)
+			actual_sck = o_dspi_sck;
+
+	end else if (OPT_CLKDIV == 1)
+	begin : SCK_ONE
+
+		initial	actual_sck = 1'b0;
+		always @(posedge i_clk)
+		if (i_reset)
+			actual_sck <= 1'b0;
+		else
+			actual_sck <= (!o_dspi_sck)&&(clk_ctr > 0);
+
+	end else begin : SCK_ANY
+
+		initial	actual_sck = 1'b0;
+		always @(posedge i_clk)
+		if (i_reset)
+			actual_sck <= 1'b0;
+		else
+			actual_sck <= (o_dspi_sck)&&(ckpre)&&(clk_ctr > 0);
+
+	end endgenerate
 
 
 `ifdef	FORMAL
@@ -829,8 +910,8 @@ module	dualflexpress(i_clk, i_reset,
 			sck_pipe <= 0;
 		else if (RDDELAY > 1)
 			sck_pipe <= { sck_pipe[RDDELAY-2:0], actual_sck };
-		else
-			sck_pipe <= actual_sck;
+		else // if (RDDELAY == 1)
+			sck_pipe[0] <= actual_sck;
 
 		initial	ack_pipe = 0;
 		always @(posedge i_clk)
@@ -839,7 +920,7 @@ module	dualflexpress(i_clk, i_reset,
 		else if (RDDELAY > 1)
 			ack_pipe <= { ack_pipe[RDDELAY-2:0], dly_ack };
 		else
-			ack_pipe <= dly_ack;
+			ack_pipe[0] <= dly_ack;
 
 		reg	not_done;
 		always @(*)
@@ -858,7 +939,7 @@ module	dualflexpress(i_clk, i_reset,
 		else if (RDDELAY > 1)
 			stall_pipe <= { stall_pipe[RDDELAY-2:0], not_done };
 		else
-			stall_pipe <= not_done;
+			stall_pipe[0] <= not_done;
 		
 		always @(*)
 			o_wb_ack = ack_pipe[RDDELAY-1];
@@ -931,11 +1012,6 @@ module	dualflexpress(i_clk, i_reset,
 		cfg_dir   <= i_wb_data[DIR_BIT];
 	end
 
-	// verilator lint_off UNUSED
-	wire	[19:0]	unused;
-	assign	unused = { i_wb_data[31:12] };
-	// verilator lint_on  UNUSED
-
 	reg	r_last_cfg;
 
 	initial	r_last_cfg = 1'b0;
@@ -952,6 +1028,10 @@ module	dualflexpress(i_clk, i_reset,
 				? i_wb_data[7:0] : o_wb_data[7:0]
 			};
 
+	// verilator lint_off UNUSED
+	wire	[19:0]	unused;
+	assign	unused = { i_wb_data[31:12] };
+	// verilator lint_on  UNUSED
 
 `ifdef	FORMAL
 	localparam	F_MEMDONE   = NDUMMY+12+16+(OPT_ODDR ? 0:1);
@@ -1145,6 +1225,11 @@ module	dualflexpress(i_clk, i_reset,
 	end
 
 
+	always @(posedge i_clk)
+	if ((OPT_CLKDIV==1)&&(!o_dspi_cs_n)&&(!$past(o_dspi_cs_n))
+			&&(!$past(o_dspi_cs_n,2))&&(!cfg_mode))
+		assert(o_dspi_sck != $past(o_dspi_sck));
+
 	/////////////////
 	//
 	//  Read requests
@@ -1154,7 +1239,10 @@ module	dualflexpress(i_clk, i_reset,
 	if ((f_past_valid)&&(!$past(i_reset))&&($past(bus_request)))
 	begin
 		assert(!o_dspi_cs_n);
-		assert(o_dspi_sck == 1'b1);
+		if ((OPT_ODDR)||(!$past(pipe_req)))
+			assert(o_dspi_sck == 1'b1);
+		else
+			assert(o_dspi_sck == 1'b0);
 		//
 		if (!$past(o_dspi_cs_n))
 		begin
@@ -1198,6 +1286,10 @@ module	dualflexpress(i_clk, i_reset,
 	if (((!OPT_PIPE)&&(clk_ctr != 0))||(clk_ctr > 6'd1))
 		assert(o_wb_stall);
 
+	always @(posedge i_clk)
+	if ((OPT_CLKDIV>0)&&($past(o_dspi_cs_n)))
+		assert(o_dspi_sck);
+
 	/////////////////
 	//
 	//  User mode
@@ -1220,7 +1312,9 @@ module	dualflexpress(i_clk, i_reset,
 	always @(posedge i_clk)
 	if (bus_request)
 	begin
+		// Make sure all of the bits are set
 		fv_addr <= 0;
+		// Now set as many bits as we have address bits
 		fv_addr[AW-1:0] <= i_wb_addr;
 	end
 
@@ -1268,7 +1362,7 @@ module	dualflexpress(i_clk, i_reset,
 		assert(o_dspi_sck);
 
 	always @(posedge i_clk)
-	if (|f_memread[F_MEMDONE-16-NDUMMY+4:0])
+	if (|f_memread[F_MEMDONE-16-NDUMMY+4-1:0])
 		assert(o_dspi_mod == DUAL_WRITE);
 	else if (|f_memread[F_MEMDONE-16-1:F_MEMDONE-16-NDUMMY+4])
 	// begin assert(1); end
@@ -1362,7 +1456,7 @@ module	dualflexpress(i_clk, i_reset,
 
 	always @(posedge i_clk)
 	if (f_memread[F_MEMDONE])
-		assert((clk_ctr == 0)||((OPT_PIPE)&&(clk_ctr == 16)));
+		assert((clk_ctr == 0)||((OPT_PIPE)&&(clk_ctr == F_PIPEDONE)));
 	// else if (|f_memread[F_MEMDONE-1:0])
 	//	assert(f_memread[F_MEMDONE-clk_ctr]);
 
@@ -1439,7 +1533,7 @@ module	dualflexpress(i_clk, i_reset,
 
 	always @(posedge i_clk)
 	if (f_piperead[F_PIPEDONE])
-		assert(clk_ctr == 0 || clk_ctr == 16);
+		assert(clk_ctr == 0 || clk_ctr == F_PIPEDONE);
 	else if (|f_piperead[F_PIPEDONE-1:0])
 		assert(f_piperead[F_PIPEDONE-clk_ctr]);
 
@@ -1500,7 +1594,7 @@ module	dualflexpress(i_clk, i_reset,
 		end
 		if (f_cfglswrite[F_CFGLSDONE-6])
 		begin
-			assert(o_dspi_dat[0] == fv_data[5]); // ICE40
+			assert(o_dspi_dat[0] == fv_data[5]);
 			assert(clk_ctr == 6);
 		end
 		if (f_cfglswrite[F_CFGLSDONE-5])
@@ -1783,10 +1877,6 @@ module	dualflexpress(i_clk, i_reset,
 			||(|f_cfghswrite[F_CFGHSACK:0])
 			||(|f_cfghsread[F_CFGHSACK:0]);
 
-	// always @(*)
-	// if (!f_dspi_not_done)
-	//	assert(!actual_sck);
-
 	always @(*)
 	begin
 		if ((|f_memread[F_MEMDONE:0])||(|f_piperead[F_PIPEDONE:0]))
@@ -1849,7 +1939,6 @@ module	dualflexpress(i_clk, i_reset,
 			||(|f_piperead[F_PIPEDONE:0]));
 	end else if (!maintenance && cfg_mode)
 	begin
-		// assert(!o_dspi_cs_n);
 		if ((o_dspi_sck == OPT_ODDR)||(clk_ctr > 0)||(actual_sck))
 		begin
 			assert( (|f_cfglswrite[F_CFGLSDONE-1:0])
@@ -1868,20 +1957,26 @@ module	dualflexpress(i_clk, i_reset,
 			|| f_cfghsread[F_CFGHSACK]);
 	end
 
+
+	////////////////////////////////////////////////////////////////////////
+	//
+	// Cover Properties
+	//
+	////////////////////////////////////////////////////////////////////////
+	//
+	// Due to the way the chip starts up, requiring 32k+ maintenance clocks,
+	// these cover statements are not likely to be hit
+
 	generate if (!OPT_STARTUP)
 	begin
+		// Why is this generate only if !OPT_STARTUP?  For performance
+		// reasons.  The startup sequence can take a great many clocks.
+		// cover() would never be able to work through all of those
+		// clocks to find the following examples, and so it would fail.
+		// By only checking these cover() statements if !OPT_STARTUP,
+		// we give them an opportunity to succeed
 		always @(posedge i_clk)
-		begin
 			cover(o_wb_ack && f_memread[ F_MEMACK]);
-			cover(o_wb_ack && f_piperead[F_PIPEACK]);
-			//
-			cover(o_wb_ack && |f_memread);
-			//
-			cover(|f_memread);
-			//
-			cover(f_memread[   F_MEMACK]);
-
-		end
 
 		if (OPT_CFG)
 		begin
@@ -1920,6 +2015,13 @@ module	dualflexpress(i_clk, i_reset,
 			cover(o_wb_ack && f_cfghswrite[F_CFGHSACK]);
 			end
 		end
+
+		if (OPT_PIPE)
+		begin
+			always @(posedge i_clk)
+				cover(o_wb_ack && f_piperead[F_PIPEACK]);
+		end
+		//
 	end else begin
 
 		always @(posedge i_clk)
@@ -1927,34 +2029,6 @@ module	dualflexpress(i_clk, i_reset,
 
 	end endgenerate
 
-	////////////////////////////////////////////////////////////////////////
-	//
-	// Cover Properties
-	//
-	////////////////////////////////////////////////////////////////////////
-	//
-	// Due to the way the chip starts up, requiring 32k+ maintenance clocks,
-	// these cover statements are not likely to be hit
-
-	generate if (!OPT_STARTUP)
-	begin
-		always @(posedge i_clk)
-			cover((o_wb_ack)&&(!cfg_mode));
-		always @(posedge i_clk)
-			cover((o_wb_ack)&&(!cfg_mode)&&(!$past(o_dspi_cs_n)));
-		always @(posedge i_clk)
-			// Cover a piped transaction
-			cover((o_wb_ack)&&(!cfg_mode)&&(!o_dspi_cs_n));	//!
-		always @(posedge i_clk)
-			cover((o_wb_ack)&&(cfg_mode)&&(cfg_speed));
-		always @(posedge i_clk)
-			cover((o_wb_ack)&&(cfg_mode)&&(!cfg_speed)&&(cfg_dir));
-		always @(posedge i_clk)
-			cover((o_wb_ack)&&(cfg_mode)&&(!cfg_speed)&&(!cfg_dir));
-	end endgenerate
-
-`ifdef	UGLY
-`endif
 `endif
 endmodule
 // Originally:			   (XPRS)		wbqspiflash

@@ -61,12 +61,12 @@ extern const unsigned DEVID;
 const unsigned	DEVID = 0x01152340;
 static	const unsigned
 	DEVESD = 0x014,
-	MICROSECONDS = 80,	// Clocks per microsecond
-	MILLISECONDS = MICROSECONDS * 1000,
-	SECONDS = MILLISECONDS * 1000,
-	tW     =   20 * MICROSECONDS,	// write config cycle time
-	tBE    =    2 * SECONDS,	// Block erase time
-	tDP    =   10 * SECONDS,	// CS High to power down mode
+	MICROSECONDS = ((CLKRATE_HZ + 1)/ 1000000),
+	MILLISECONDS = ((CLKRATE_HZ + 1)/ 1000),
+	SECONDS = CLKRATE_HZ,
+	tW     =   20 * MICROSECONDS, // write config cycle time
+	tBE    =    2 * SECONDS,
+	tDP    =   10 * SECONDS,
 	tRES   =   30 * SECONDS,
 // Shall we artificially speed up this process?
 	tPP    = 12 * MICROSECONDS,
@@ -76,7 +76,7 @@ static	const unsigned
 	// tSE    =  400 * MILLISECONDS;
 
 FLASHSIM::FLASHSIM(const int lglen, bool debug) : m_debug(debug),
-			CKDELAY(0), RDDELAY(1), NDUMMY(8) {
+			CKDELAY(0), RDDELAY(2), NDUMMY(4) {
 	m_membytes = (1<<lglen);
 	m_memmask = (m_membytes - 1);
 	m_mem = new char[m_membytes];
@@ -256,6 +256,7 @@ int	FLASHSIM::operator()(const int csn, const int sck, const int dat) {
 		m_ireg   = (m_ireg << 4) | (dat & 0x0f);
 		m_count += 4;
 		m_oreg <<= 4;
+		assert(0);
 	} else if (m_mode == FM_DSPI) {
 		m_ireg   = (m_ireg << 2) | (dat & 0x03);
 		m_count += 2;
@@ -268,6 +269,7 @@ int	FLASHSIM::operator()(const int csn, const int sck, const int dat) {
 
 	// printf("PROCESS, COUNT = %d, IREG = %02x\n", m_count, m_ireg);
 	if (m_state == QSPIF_QUAD_READ_IDLE) {
+		assert(0);
 		// Cannot be in this state and deep power down
 		assert((m_sreg & QSPIF_DEEP_POWER_DOWN_FLAG)==0);
 
@@ -645,8 +647,9 @@ int	FLASHSIM::simtick(const int csn, const int sck, const int dat,
 
 	// Simulate an ODDR for the clock
 	int	r;
-	r = (*this)(csn, (lclsck != 0)?0:1, dat);
-	r = (*this)(csn, 1, dat);
+	// r = (*this)(csn, (lclsck != 0)?0:1, dat);
+	// r = (*this)(csn, 1, dat);
+	r = (*this)(csn, lclsck, dat);
 
 	if (false) {
 		// Debug the transaction
@@ -660,7 +663,7 @@ int	FLASHSIM::simtick(const int csn, const int sck, const int dat,
 			case 3:		printf(" (QDO)");	break;
 			case 4:		printf(" (DDI)");	break;
 			case 5:		printf(" (DDO)");	break;
-			}
+			} printf(",%d",mod);
 
 			printf(" -- %d %d",
 				CKDELAY, (m_ckdelay != NULL) ? m_ckdelay[0] : -2);

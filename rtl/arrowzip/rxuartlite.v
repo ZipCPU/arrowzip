@@ -21,7 +21,7 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Copyright (C) 2015-2018, Gisselquist Technology, LLC
+// Copyright (C) 2015-2019, Gisselquist Technology, LLC
 //
 // This program is free software (firmware): you can redistribute it and/or
 // modify it under the terms of  the GNU General Public License as published
@@ -60,13 +60,9 @@
 `define	RXUL_IDLE		4'hf
 
 module rxuartlite(i_clk, i_uart_rx, o_wr, o_data);
-	parameter			TIMER_BITS = 10;
-`ifdef	FORMAL
-	parameter  [(TIMER_BITS-1):0]	CLOCKS_PER_BAUD = 16; // Necessary for formal proof
-`else
-	parameter  [(TIMER_BITS-1):0]	CLOCKS_PER_BAUD = 868;	// 115200 MBaud at 100MHz
-`endif
-	localparam			TB = TIMER_BITS;
+	parameter	TIMER_BITS = 10;
+	parameter [(TIMER_BITS-1):0] CLOCKS_PER_BAUD = 868;
+	localparam	TB = TIMER_BITS;
 	input	wire		i_clk;
 	input	wire		i_uart_rx;
 	output	reg		o_wr;
@@ -196,6 +192,9 @@ module rxuartlite(i_clk, i_uart_rx, o_wr, o_data);
 	else if (baud_counter == 1)
 		zero_baud_counter <= 1'b1;
 
+`ifdef	FORMAL
+// Formal properties for this module are maintained elsewhere
+`endif
 endmodule
 
 

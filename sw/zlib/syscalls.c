@@ -357,6 +357,19 @@ __attribute__((__noreturn__))
 void	_exit(int rcode) {
 	void	_hw_shutdown(int rcode) _ATTRIBUTE((__noreturn__));
 
+#ifdef	_BOARD_HAS_BUSCONSOLE
+	// Problem: Once u_tx & 0x100 goes low, there may still be a character
+	// or two in the bus console's pipeline.  These may prevent a newline
+	// from completing before we issue the exit command.
+	//
+	// Solution: Just to make sure any newline finishes, send a final
+	// non-newline character.  This character will still be transmitting
+	// once we are complete, but any last newline will at least have been
+	// received
+	_outbyte(' ');
+	_outbyte(' ');
+#endif
+
 	// Wait for any serial ports to flush their buffers
 #if	defined(_BOARD_HAS_BUSCONSOLE)
 	while(_uart->u_tx & 0x0100)

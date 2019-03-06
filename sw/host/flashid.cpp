@@ -1,13 +1,12 @@
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Filename: 	builddate.v
+// Filename:	flashid.cpp
 //
 // Project:	ArrowZip, a demonstration of the Arrow MAX1000 FPGA board
 //
-// Purpose:	This file records the date of the last build.  Running "make"
-//		in the main directory will create this file.  The `define found
-//	within it then creates a version stamp that can be used to tell which
-//	configuration is within an FPGA and so forth.
+// Purpose:	Reads the ID from the flash, and verifies that the flash can
+//		be put back into QSPI mode after reading the ID.
+//
 //
 // Creator:	Dan Gisselquist, Ph.D.
 //		Gisselquist Technology, LLC
@@ -38,5 +37,54 @@
 ////////////////////////////////////////////////////////////////////////////////
 //
 //
-`define DATESTAMP 32'h20190305
-`define BUILDTIME 32'h00220910
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <strings.h>
+#include <ctype.h>
+#include <string.h>
+#include <signal.h>
+#include <assert.h>
+
+#include "port.h"
+#include "regdefs.h"
+#include "hexbus.h"
+#include "flashdrvr.h"
+
+FPGA	*m_fpga;
+void	closeup(int v) {
+	m_fpga->kill();
+	exit(0);
+}
+
+void	usage(void) {
+	printf("USAGE: flashid\n"
+"\n"
+"\tflashid reads the ID from the flash, and then attempts to place the\n"
+"\tflash back into QSPI mode, followed by reading several values from it\n"
+"\tin order to demonstrate that it was truly returned to QSPI mode\n");
+}
+
+int main(int argc, char **argv) {
+	FLASHDRVR	*m_flash;
+	FPGAOPEN(m_fpga);
+
+	m_flash = new FLASHDRVR(m_fpga);
+	printf("Flash device ID: 0x%08x\n", m_flash->flashid());
+	printf("First several words:\n");
+	for(int k=0; k<12; k++)
+		printf("\t0x%08x\n", m_fpga->readio(R_FLASH+(k<<2)));
+
+#ifdef	RESET_ADDRESS
+	printf("From the RESET_ADDRESS:\n");
+	for(int k=0; k<5; k++) {
+		printf("%08x: ", RESET_ADDRESS + (k<<2)); fflush(stdout);
+		printf("\t0x%08x\n", m_fpga->readio(RESET_ADDRESS+(k<<2)));
+		fflush(stdout);
+	}
+#endif
+
+	delete	m_flash;
+	delete	m_fpga;
+}
+

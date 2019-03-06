@@ -128,6 +128,10 @@ static volatile unsigned *const _buspic = ((unsigned *)0x00400008);
 #define	_BOARD_HAS_BUSTIMER
 static volatile unsigned *const _bustimer = ((unsigned *)0x00500000);
 #endif	// BUSTIMER_ACCESS
+#ifdef	FLASHCFG_ACCESS
+#define	_BOARD_HAS_FLASHCFG
+static volatile unsigned * const _flashcfg = ((unsigned *)(0x00100000));
+#endif	// FLASHCFG_ACCESS
 #define	_BOARD_HAS_VERSION
 //
 // Interrupt assignments (1 PICs)

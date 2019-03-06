@@ -68,7 +68,6 @@ module	wbpriarbiter(i_clk,
 	// zeroing things on idle can make them stand out all the more when
 	// staring at wires and dumps and such.
 	parameter	[0:0]		OPT_ZERO_ON_IDLE = 1'b0;
-	parameter	[0:0]		F_OPT_CLK2FFLOGIC = 1'b0;
 	//
 	input	wire			i_clk;
 	// Bus A

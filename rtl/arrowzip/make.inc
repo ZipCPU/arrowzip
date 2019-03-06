@@ -45,17 +45,17 @@ HBBUSD := hexbus
 HBBUS  := $(addprefix $(HBBUSD)/,hbconsole.v hbdechex.v hbdeword.v hbexec.v hbgenhex.v hbidle.v hbints.v hbnewline.v hbpack.v console.v hbcheckerr.v)
 BKRAM := memdev.v
 
-MKGRPZRtYqe := rtclight.v rtcbare.v rtcalarm.v rtcstopwatch.v rtctimer.v
+MKGRPyp47an := rtclight.v rtcbare.v rtcalarm.v rtcstopwatch.v rtctimer.v
 
 ZIPCPUD := cpu
 ZIPCPU  := $(addprefix $(ZIPCPUD)/,zipcpu.v cpuops.v dblfetch.v memops.v idecode.v ziptimer.v wbpriarbiter.v zipbones.v busdelay.v cpudefs.v icontrol.v div.v wbdblpriarb.v mpyop.v iscachable.v dcache.v slowmpy.v)
-FLASH := dualflexpress.v
-
 HBUART := ../common/txuartlite.v rxuartlite.v ufifo.v
 
 BUSPICD := cpu
 BUSPIC  := $(addprefix $(BUSPICD)/,icontrol.v)
 BUSDLYD := cpu
 BUSDLY  := $(addprefix $(BUSDLYD)/,busdelay.v wbpriarbiter.v)
-VFLIST := main.v  $(SCOPC) $(HBBUS) $(BKRAM) $(MKGRPZRtYqe) $(ZIPCPU) $(FLASH) $(HBUART) $(BUSPIC) $(BUSDLY)
+FLASH := dualflexpress.v
+
+VFLIST := main.v  $(SCOPC) $(HBBUS) $(BKRAM) $(MKGRPyp47an) $(ZIPCPU) $(HBUART) $(BUSPIC) $(BUSDLY) $(FLASH)
 AUTOVDIRS :=  -y hexbus -y cpu

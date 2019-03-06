@@ -2,7 +2,7 @@
 ##
 ## Filename: 	mem_sdram_bkram.txt
 ##
-## Project:	OpenArty, an entirely open SoC based upon the Arty platform
+## Project:	ArrowZip, a demonstration of the Arrow MAX1000 FPGA board
 ##
 ## Purpose:	Describes a memory model containing nothing more than SDRAM
 ##		and block RAM.  This will be used to create a linker script

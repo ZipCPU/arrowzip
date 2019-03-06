@@ -52,8 +52,8 @@
 @BUS.CLOCK=clk
 @SCOPE.TRIGGER=zip_trigger
 @SCOPE.DATA=zip_debug
-# @$RESET_ADDRESS=@$(flash.REGBASE)+(4<<20)
-@$RESET_ADDRESS=@$(bkram.REGBASE)
+@$RESET_ADDRESS=@$(flash.REGBASE)
+# @$RESET_ADDRESS=@$(bkram.REGBASE)
 @CACHABLE.FILE=iscachable.v
 @LGICACHE=10
 @LGDCACHE=0

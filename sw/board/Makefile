@@ -89,8 +89,8 @@ $(OBJDIR)/cputest.o: cputest.c
 	$(mk-objdir)
 	$(CC) $(CFLAGS) -c -Wa,-cis -fno-builtin $< -o $@
 
-cputest: $(OBJDIR)/cputest.o boardram.ld
-	$(CC) $(CFLAGS) -T boardram.ld $< -o $@
+cputest: $(OBJDIR)/cputest.o board.ld
+	$(CC) $(CFLAGS) -T board.ld $< -o $@
 
 
 $(OBJDIR)/hello.o: hello.c

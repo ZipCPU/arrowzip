@@ -47,6 +47,7 @@
 
 const	REGNAME	raw_bregs[] = {
 	{ R_FLASHCFG      ,	"FLASHCFG"   	},
+	{ R_FLASHCFG      ,	"QSPIC"      	},
 	{ R_FLASHSCOPE    ,	"FLASHSCOPE" 	},
 	{ R_FLASHSCOPED   ,	"FLASHSCOPED"	},
 	{ R_CONSOLE_FIFO  ,	"UFIFO"      	},

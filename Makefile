@@ -38,7 +38,7 @@
 ##
 ##
 .PHONY: all
-all:	check-install archive datestamp rtl sim sw
+all:	check-install archive rtl sim sw
 #
 # Could also depend upon load, if desired, but not necessary
 BENCH := # `find bench -name Makefile` `find bench -name "*.cpp"` `find bench -name "*.h"`
@@ -120,7 +120,7 @@ archive:
 # Build our main (and toplevel) Verilog files via autofpga
 #
 .PHONY: autodata datestamp
-autodata: check-autofpga
+autodata: check-autofpga datestamp
 	$(SUBMAKE) auto-data
 	$(MAKE) --no-print-directory --directory=auto-data
 	$(call copyif-changed,auto-data/toplevel.v,$(SOCDIR)/toplevel.v)
@@ -142,7 +142,7 @@ autodata: check-autofpga
 # simulation class library that we can then use for simulation
 #
 .PHONY: verilated
-verilated: autodata datestamp check-verilator
+verilated: check-verilator
 	+@$(SUBMAKE) rtl/simple
 	+@$(SUBMAKE) $(SOCDIR)
 
@@ -182,7 +182,7 @@ sw-host:
 # Build the hardware specific newlib library
 #
 .PHONY: sw-zlib
-sw-zlib: autodata rtl check-zip-gcc
+sw-zlib: check-zip-gcc
 	+@$(SUBMAKE) sw/zlib
 
 #
@@ -190,7 +190,7 @@ sw-zlib: autodata rtl check-zip-gcc
 # Build the board software.  This may (or may not) use the software library
 #
 .PHONY: sw-board
-sw-board: autodata rtl sw-zlib check-zip-gcc
+sw-board: sw-zlib check-zip-gcc
 	+@$(SUBMAKE) $(ZIPSW)
 
 #

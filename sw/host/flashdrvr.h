@@ -1,18 +1,18 @@
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Filename: 	demo.v
+// Filename: 	flashdrvr.h
 //
 // Project:	ArrowZip, a demonstration of the Arrow MAX1000 FPGA board
 //
-// Purpose:	This is the top level design entity for the simple ArrowZip
-//		demo.
+// Purpose:	Flash driver.  Encapsulates writing, both erasing sectors and
+//		the programming pages, to the flash device.
 //
 // Creator:	Dan Gisselquist, Ph.D.
 //		Gisselquist Technology, LLC
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Copyright (C) 2018-2019, Gisselquist Technology, LLC
+// Copyright (C) 2015-2019, Gisselquist Technology, LLC
 //
 // This program is free software (firmware): you can redistribute it and/or
 // modify it under the terms of  the GNU General Public License as published
@@ -36,26 +36,39 @@
 ////////////////////////////////////////////////////////////////////////////////
 //
 //
-`default_nettype	none
 //
-module	demo(i_clk, o_led, o_uart_tx, o_uart_tx_b);
-	input	wire		i_clk;
-	output	wire	[7:0]	o_led;
-	output	wire		o_uart_tx;	// PIO_02	N2
-	output	wire		o_uart_tx_b;	// PIO_06	L3
+#ifndef	FLASHDRVR_H
+#define	FLASHDRVR_H
 
+#include "regdefs.h"
 
-	wire	s_clk, locked;
-	ippll genclk(i_clk, s_clk, locked);
+class	FLASHDRVR {
+private:
+	DEVBUS	*m_fpga;
+	bool	m_debug;
+	unsigned	m_id; // ID of the flash device
 
-	helloworld #(.INITIAL_UART_SETUP(31'd0868)) // 19.2 kB
-		sayhello(s_clk, o_uart_tx);
+	//
+	void	take_offline(void);
+	void	place_online(void);
+	void	restore_dualio(void);
+	void	restore_quadio(void);
+	//
+	bool	verify_config(void);
+	void	set_config(void);
+	void	flwait(void);
+public:
+	FLASHDRVR(DEVBUS *fpga);
+	bool	erase_sector(const unsigned sector, const bool verify_erase=true);
+	bool	page_program(const unsigned addr, const unsigned len,
+			const char *data, const bool verify_write=true);
+	bool	write(const unsigned addr, const unsigned len,
+			const char *data, const bool verify=false);
 
-	assign	o_uart_tx_b = o_uart_tx;
+	unsigned	flashid(void);
 
-	wire	[7:0]	w_led;
-	ledbouncer knightrider(s_clk, w_led);
+	static void take_offline(DEVBUS *fpga);
+	static void place_online(DEVBUS *fpga);
+};
 
-	assign o_led = (locked) ? w_led : 8'h00;
-
-endmodule
+#endif
