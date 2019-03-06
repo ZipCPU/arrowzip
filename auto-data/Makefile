@@ -54,7 +54,7 @@ RTC     := rtclight.txt # rtcdate.txt
 DBGBUS  := hbconsole.txt
 MEMORY  := bkram.txt flexpress.txt # sdram.txt
 CPU     := zipbones.txt
-SCOPES  := flashscope.txt # cpuscope.txt
+SCOPES  := # flashscope.txt # cpuscope.txt
 LDSCRIPT:= mem_flash_bkram.txt mem_bkram_only.txt # mem_sdram_bkram.txt
 DATA := clock.txt $(BASE) $(AUX) $(IO) $(RTC)			\
 	$(DBGBUS) $(MEMORY) $(CPU) $(SCOPES) $(LDSCRIPT)

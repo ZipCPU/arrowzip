@@ -57,6 +57,8 @@
 ////////////////////////////////////////////////////////////////////////////////
 //
 //
+`default_nettype	none
+//
 module	hbpack(i_clk, i_reset, i_stb, i_bits, o_pck_stb, o_pck_word);
 	input	wire	i_clk, i_reset;
 	// The incoming (partially decoded) byte stream
@@ -81,10 +83,10 @@ module	hbpack(i_clk, i_reset, i_stb, i_bits, o_pck_stb, o_pck_word);
 	always @(posedge i_clk)
 		o_pck_stb <= (!i_reset)&&((i_stb)&&(cmd_loaded)&&(i_bits[4]));
 
-	initial	o_pck_word[31:0] = 0;
+	initial	r_word = 0;
 	always @(posedge i_clk)
 		if (i_reset)
-			r_word[31:0] <= 0;
+			r_word <= 0;
 		else if (i_stb)
 		begin
 			if (i_bits[4])
@@ -100,6 +102,7 @@ module	hbpack(i_clk, i_reset, i_stb, i_bits, o_pck_stb, o_pck_word);
 				r_word[31:0] <= { r_word[27:0], i_bits[3:0] };
 		end
 
+	initial	o_pck_word = 0;
 	always @(posedge i_clk)
 		if (i_reset)
 			o_pck_word <= 0;

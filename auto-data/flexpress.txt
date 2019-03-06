@@ -112,7 +112,7 @@
 `endif
 		@$(PREFIX)i(i_clk, i_reset,
 			(wb_cyc), (wb_stb)&&(@$(PREFIX)_sel),
-			(wb_stb)&&(flash_cfg_sel), wb_we,
+			(wb_stb)&&(flashcfg_sel), wb_we,
 			wb_addr[(@$LGFLASHSZ-3):0], wb_data,
 			@$(PREFIX)_ack, @$(PREFIX)_stall, @$(PREFIX)_data,
 			o_dspi_sck, o_dspi_cs_n, o_dspi_mod, o_dspi_dat, i_dspi_dat,
@@ -145,12 +145,12 @@ _@$(PREFIX)=ORIGIN(@$(PREFIX));
 #ifdef	@$(ACCESS)
 	FLASHSIM	*m_@$(MEM.NAME);
 	unsigned	m_last_dspi_dat;
-#endif
+#endif // @$(ACCESS)
 @SIM.INIT=
 #ifdef	@$(ACCESS)
 	m_@$(MEM.NAME) = new FLASHSIM(FLASHLGLEN);
 	m_last_dspi_dat = 15;
-#endif
+#endif // @$(ACCESS)
 @SIM.TICK=
 #ifdef  @$(ACCESS)
 		m_core->i_dspi_dat = m_@$(MEM.NAME)->simtick(

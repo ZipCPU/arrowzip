@@ -62,17 +62,14 @@
 	// (Debugging access) Serial port
 	input	wire	i_uart_rx;
 	output	wire	o_uart_tx;
-@TOP.DEFNS=
-	wire	hb_err;
 @TOP.MAIN=
-		i_uart_rx, o_uart_tx, hb_err
+		i_uart_rx, o_uart_tx
 @MAIN.PORTLIST=
 		// UART/host to wishbone interface
-		i_uart_rx, o_uart_tx, o_hb_err
+		i_uart_rx, o_uart_tx
 @MAIN.IODECL=
 	input	wire		i_uart_rx;
 	output	wire		o_uart_tx;
-	output	wire		o_hb_err;
 @MAIN.PARAM=
 	//
 	//
@@ -135,8 +132,7 @@
 			@$(PREFIX)_tx_stb, @$(PREFIX)_tx_data, @$(PREFIX)_tx_busy,
 			//
 			w_console_tx_stb, w_console_tx_data, w_console_busy,
-			w_console_rx_stb, w_console_rx_data,
-			o_hb_err);
+			w_console_rx_stb, w_console_rx_data);
 	assign	@$(PREFIX)_addr= @$(PREFIX)_tmp_addr[(@$BUS_ADDRESS_WIDTH-1):0];
 @REGDEFS.H.DEFNS=
 #define	R_ZIPCTRL	@$.ZIP_ADDRESS

@@ -61,7 +61,7 @@
 
 #define	CFG_USERMODE	(1<<12)
 #ifdef	QSPI_FLASH
-#error	QSPI_FLASH is defined
+#error	"QSPI_FLASH is defined in a DSPI only design"
 #define	CFG_QSPEED	(1<<11)
 #endif
 #ifdef	DSPI_FLASH

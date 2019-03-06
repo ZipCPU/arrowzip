@@ -26,7 +26,7 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Copyright (C) 2017, Gisselquist Technology, LLC
+// Copyright (C) 2017-2019, Gisselquist Technology, LLC
 //
 // This file is part of the hexbus debugging interface.
 //
@@ -51,6 +51,8 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
+//
+`default_nettype	none
 //
 `define	CMD_SUB_RD	2'b00
 `define	CMD_SUB_WR	2'b01
@@ -200,9 +202,9 @@ module	hbexec(i_clk, i_reset,
 			// down the number of bits required in a set address
 			// request.
 			if (!i_cmd_word[1])
-				o_wb_addr <= i_cmd_word[31:2];
+				o_wb_addr <= i_cmd_word[AW+1:2];
 			else
-				o_wb_addr <= i_cmd_word[31:2] + o_wb_addr;
+				o_wb_addr <= i_cmd_word[AW+1:2] + o_wb_addr;
 
 			//
 			// We'll allow that bus requests can either increment
@@ -230,7 +232,7 @@ module	hbexec(i_clk, i_reset,
 		// takes a clock to do.  Hence, we'll use "newaddr" as a flag
 		// that o_wb_addr has a new value in it that needs to be
 		// returned via the command link.
-		newaddr <= ((i_cmd_addr)&&(!o_cmd_busy));
+		newaddr <= ((!i_reset)&&(i_cmd_addr)&&(!o_cmd_busy));
 	end
 
 	//
@@ -271,6 +273,8 @@ module	hbexec(i_clk, i_reset,
 	// where we have data to reutrn, and zero otherwise.  If o_rsp_stb is
 	// true, then o_rsp_word is the response we want to return.  In all
 	// other cases, o_rsp_word is a don't care.
+	initial	o_rsp_stb = 1'b1;
+	initial	o_rsp_word = `RSP_RESET;
 	always @(posedge i_clk)
 	if (i_reset)
 	begin

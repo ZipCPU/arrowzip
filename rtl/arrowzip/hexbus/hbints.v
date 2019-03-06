@@ -57,33 +57,31 @@ module	hbints(i_clk, i_reset, i_interrupt,
 	output	reg	[33:0]	o_int_word;
 	input	wire		i_busy;
 
-	reg	int_state, pending_interrupt;
+	reg	int_state, pending_interrupt, loaded, int_loaded;
 
 	initial	int_state = 1'b0;
-	initial	pending_interrupt = 1'b0;
 	always @(posedge i_clk)
 		if (i_reset)
 			int_state <= 1'b0;
-		else if (i_interrupt)
+		else if ((i_interrupt)&&(!int_state))
 			int_state <= 1'b1;
 		else if ((!pending_interrupt)&&(!i_interrupt))
 			int_state <= 1'b0;
 
+	initial	pending_interrupt = 1'b0;
 	always @(posedge i_clk)
 		if (i_reset)
 			pending_interrupt <= 1'b0;
 		else if ((i_interrupt)&&(!int_state))
 			pending_interrupt <= 1'b1;
-		else if ((o_int_stb)&&(!i_busy)
-				&&(o_int_word[33:29] == `INT_PREFIX))
+		else if ((o_int_stb)&&(!i_busy)&&(int_loaded))
 			pending_interrupt <= 1'b0;
 
-	reg	loaded;
 	initial	loaded = 1'b0;
 	always @(posedge i_clk)
 		if (i_reset)
 			loaded <= 1'b0;
-		else if (i_stb)
+		else if ((i_stb)&&(!o_int_busy))
 			loaded <= 1'b1;
 		else if ((o_int_stb)&&(!i_busy))
 			loaded <= 1'b0;
@@ -92,19 +90,26 @@ module	hbints(i_clk, i_reset, i_interrupt,
 	always @(posedge i_clk)
 		if (i_reset)
 			o_int_stb <= 1'b0;
-		else if (i_stb)
+		else if ((i_stb)&&(!o_int_busy))
 			o_int_stb <= 1'b1;
-		else if (pending_interrupt)
+		else if ((pending_interrupt)&&((!int_loaded)||(i_busy)))
 			o_int_stb <= 1'b1;
 		else if ((!loaded)||(!i_busy))
 			o_int_stb <= 1'b0;
 
+	initial	int_loaded = 1'b1;
+	initial	o_int_word = `INT_WORD;
 	always @(posedge i_clk)
-		if (i_stb)
+		if ((i_stb)&&(!o_int_busy))
+		begin
+			int_loaded <= 1'b0;
 			o_int_word <= i_word;
-		else if ((pending_interrupt)&&(!loaded))
+		end else if ((!i_busy)||(!o_int_stb))
+		begin
 			// Send an interrupt
 			o_int_word <= `INT_WORD;
+			int_loaded <= 1'b1;
+		end
 
 	assign	o_int_busy = (o_int_stb)&&(loaded);
 
