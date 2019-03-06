@@ -86,11 +86,13 @@
 #define	R_TIMER         	0x00400044	// 00400040, wbregs names: TIMER
 #define	R_STOPWATCH     	0x00400048	// 00400040, wbregs names: STOPWATCH
 #define	R_CKALARM       	0x0040004c	// 00400040, wbregs names: ALARM, CKALARM
+#define	R_CKSPEED       	0x00400050	// 00400040, wbregs names: CKSPEED
 // RTC clock registers
 #define	R_CLOCK         	0x00400040	// 00400040, wbregs names: CLOCK
 #define	R_TIMER         	0x00400044	// 00400040, wbregs names: TIMER
 #define	R_STOPWATCH     	0x00400048	// 00400040, wbregs names: STOPWATCH
 #define	R_CKALARM       	0x0040004c	// 00400040, wbregs names: ALARM, CKALARM
+#define	R_CKSPEED       	0x00400050	// 00400040, wbregs names: CKSPEED
 #define	R_BKRAM         	0x00500000	// 00500000, wbregs names: RAM
 #define	R_FLASH         	0x00800000	// 00800000, wbregs names: FLASH
 

@@ -72,11 +72,13 @@ const	REGNAME	raw_bregs[] = {
 	{ R_STOPWATCH     ,	"STOPWATCH"	},
 	{ R_CKALARM       ,	"ALARM"    	},
 	{ R_CKALARM       ,	"CKALARM"  	},
+	{ R_CKSPEED       ,	"CKSPEED"  	},
 	{ R_CLOCK         ,	"CLOCK"    	},
 	{ R_TIMER         ,	"TIMER"    	},
 	{ R_STOPWATCH     ,	"STOPWATCH"	},
 	{ R_CKALARM       ,	"ALARM"    	},
 	{ R_CKALARM       ,	"CKALARM"  	},
+	{ R_CKSPEED       ,	"CKSPEED"  	},
 	{ R_BKRAM         ,	"RAM"      	},
 	{ R_FLASH         ,	"FLASH"    	}
 };

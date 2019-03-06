@@ -43,7 +43,7 @@ HBBUSD := hexbus
 HBBUS  := $(addprefix $(HBBUSD)/,hbconsole.v hbdechex.v hbdeword.v hbexec.v hbgenhex.v hbidle.v hbints.v hbnewline.v hbpack.v console.v hbcheckerr.v)
 BKRAM := memdev.v
 
-MKGRPZiIPuO := rtclight.v rtcbare.v rtcalarm.v rtcstopwatch.v rtctimer.v
+MKGRPoweIbD := rtclight.v rtcbare.v rtcalarm.v rtcstopwatch.v rtctimer.v
 
 ZIPCPUD := cpu
 ZIPCPU  := $(addprefix $(ZIPCPUD)/,zipcpu.v cpuops.v dblfetch.v memops.v idecode.v ziptimer.v wbpriarbiter.v zipbones.v busdelay.v cpudefs.v icontrol.v div.v wbdblpriarb.v mpyop.v iscachable.v dcache.v slowmpy.v)
@@ -55,5 +55,5 @@ BUSDLYD := cpu
 BUSDLY  := $(addprefix $(BUSDLYD)/,busdelay.v wbpriarbiter.v)
 FLASH := dualflexpress.v
 
-VFLIST := main.v  $(HBBUS) $(BKRAM) $(MKGRPZiIPuO) $(ZIPCPU) $(HBUART) $(BUSPIC) $(BUSDLY) $(FLASH)
+VFLIST := main.v  $(HBBUS) $(BKRAM) $(MKGRPoweIbD) $(ZIPCPU) $(HBUART) $(BUSPIC) $(BUSDLY) $(FLASH)
 AUTOVDIRS :=  -y hexbus -y cpu

@@ -185,22 +185,21 @@ module	rtclight(i_clk, i_reset,
 	// device.  Further, because this is only the lower 32 bits of a
 	// 48 bit counter per seconds, the clock jitter is kept below
 	// 1 part in 65 thousand.
-	//
-	initial	ckspeed = DEFAULT_SPEED; // 2af31e = 2^48 / 100e6 MHz
-	// In the case of verilator, comment the above and uncomment the line
-	// below.  The clock constant below is "close" to simulation time,
-	// meaning that my verilator simulation is running about 300x slower
-	// than board time.
-	// initial	ckspeed = 32'd786432000;
 	generate if (!OPT_FIXED_SPEED)
-	begin
+	begin : ADJUSTABLE_CLOCK_RATE
 
-		wire		sp_sel;
+		wire	sp_sel;
 		assign	sp_sel = ((i_wb_stb)&&(i_wb_addr[2:0]==3'b100));
 
+		initial	ckspeed = DEFAULT_SPEED; // 2af31e = 2^48 / 100e6 MHz
 		always @(posedge i_clk)
-			if ((sp_sel)&&(i_wb_we))
-				ckspeed <= i_wb_data;
+		if ((sp_sel)&&(i_wb_we))
+			ckspeed <= i_wb_data;
+
+	end else begin : FIXED_CLOCK_DIVIDER
+
+		always @(*)
+			ckspeed <= DEFAULT_SPEED;
 
 	end endgenerate
 

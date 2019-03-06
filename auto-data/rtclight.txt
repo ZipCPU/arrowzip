@@ -60,11 +60,12 @@
 @MAIN.ALT=
 	assign	@$(PREFIX)_ppd = 1'b0;
 @REGS.NOTE= // RTC clock registers
-@REGS.N=4
+@REGS.N=5
 @REGS.0= 0 R_CLOCK	CLOCK
 @REGS.1= 1 R_TIMER	TIMER
 @REGS.2= 2 R_STOPWATCH	STOPWATCH
 @REGS.3= 3 R_CKALARM	ALARM CKALARM
+@REGS.4= 4 R_CKSPEED	CKSPEED
 @BDEF.DEFN=
 typedef	struct	RTCLIGHT_S	{
 	unsigned	r_clock, r_stopwatch, r_timer, r_alarm;
