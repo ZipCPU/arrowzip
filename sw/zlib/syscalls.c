@@ -55,12 +55,25 @@
 #define	UARTTX	_uart->u_tx
 #endif
 
+//
+// TXBUSY: Something is still going out the port
+#define	TXBUSY	(_uart->u_tx & 0x0100)
+
+// TXWAIT: The FIFO is full, and so nothing can be sent out the TX port
+#define	TXWAIT	((_uart->u_fifo & 0x010000)==0)
+
+// UARTTX: The register to write to in order send a value
+#define	UARTTX	_uart->u_tx
+
+// UARTRX: The register to read from in order to read a value
+#define	UARTRX	_uart->u_rx
+
 void
 _outbyte(char v) {
-#ifdef	_ZIP_HAS_WBUART
+#ifdef	UARTTX
 	if (v == '\n') {
 		// Depend upon the WBUART, not the PIC
-		while((_uart->u_fifo & 0x010000)==0)
+		while(TXWAIT)
 			;
 		UARTTX = (unsigned)'\r';
 	}
@@ -69,15 +82,6 @@ _outbyte(char v) {
 	while((_uart->u_fifo & 0x010000)==0)
 		;
 	uint8_t c = v;
-	UARTTX = (unsigned)c;
-#else
-#ifdef	_ZIP_HAS_UARTTX
-	// Depend upon the WBUART, not the PIC
-	while(UARTTX & 0x100)
-		;
-	uint8_t c = v;
-	UARTTX = (unsigned)c;
-#endif
 #endif
 }
 
@@ -355,7 +359,7 @@ _sbrk_r(struct _reent *reent, int sz) {
 
 __attribute__((__noreturn__))
 void	_exit(int rcode) {
-	void	_hw_shutdown(int rcode) _ATTRIBUTE((__noreturn__));
+	extern void	_hw_shutdown(int rcode) _ATTRIBUTE((__noreturn__));
 
 #ifdef	_BOARD_HAS_BUSCONSOLE
 	// Problem: Once u_tx & 0x100 goes low, there may still be a character
@@ -371,8 +375,8 @@ void	_exit(int rcode) {
 #endif
 
 	// Wait for any serial ports to flush their buffers
-#if	defined(_BOARD_HAS_BUSCONSOLE)
-	while(_uart->u_tx & 0x0100)
+#ifdef	TXBUSY
+	while(TXBUSY)
 		;
 #else
 // #error	"No console"

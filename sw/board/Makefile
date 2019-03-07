@@ -12,7 +12,7 @@
 ##
 ################################################################################
 ##
-## Copyright (C) 2018, Gisselquist Technology, LLC
+## Copyright (C) 2018-2019, Gisselquist Technology, LLC
 ##
 ## This program is free software (firmware): you can redistribute it and/or
 ## modify it under the terms of  the GNU General Public License as published
@@ -37,7 +37,7 @@
 ##
 ##
 .PHONY: all
-PROGRAMS := cputest
+PROGRAMS := hello cputest
 all:	$(PROGRAMS)
 #
 #
@@ -51,20 +51,22 @@ OBJDUMP := zip-objdump
 SUBMAKE:= $(MAKE) --no-print-directory -C
 #
 #
-SOURCES := cputest.c # hello.c
+SOURCES := cputest.c hello.c
 HEADERS :=
 DUMPRTL := -fdump-rtl-all
 DUMPTREE:= -fdump-tree-all
 LDSCRIPT:= board.ld
 LFLAGS  := -T $(LDSCRIPT) -L../zlib
+LBKRAM  := -T bkram.ld -L../zlib
 CFLAGS  := -O3 -I../zlib -I../../rtl/arrowzip
-LIBS    := -lc -lzarrow
+LIBS    := -lc -lzarrow -lgcc
 INSTALLD=/home/dan/work/rnd/zipcpu/sw/install
 NLIBD=$(INSTALLD)/cross-tools/zip/lib
 ZLIBD=../zlib
 LIB=$(ZLIBD)/libzarrow.a $(NLIBD)/libg.a $(NLIBD)/libc.a
 #
 # For source analysis, the following macros are defined:
+#
 
 %.o: $(OBJDIR)/%.o
 $(OBJDIR)/%.o: %.c
@@ -90,17 +92,17 @@ $(OBJDIR)/cputest.o: cputest.c
 	$(CC) $(CFLAGS) -c -Wa,-cis -fno-builtin $< -o $@
 
 cputest: $(OBJDIR)/cputest.o board.ld
-	$(CC) $(CFLAGS) -T board.ld $< -o $@
+	$(CC) $(CFLAGS) $(LBKRAM) $< -o $@
 
 
 $(OBJDIR)/hello.o: hello.c
 	$(CC) -O3 -c $< -o $@
 
-hello: $(OBJDIR)/hello.o board.ld
+hello: $(OBJDIR)/hello.o board.ld $(LIB)
 	$(CC) $(CFLAGS) $(LFLAGS) $< $(LIBS) -o $@
 
 define	mk-objdir
-	@bash -c "if [ ! -e $(OBJDIR) ]; then mkdir -p $(OBJDIR); fi"
+	@bash -c "if [ ! -e $(OBJDIR) ]; then mkdir -p $(OBJDIR)/; fi"
 endef
 
 define	build-depends
@@ -129,4 +131,6 @@ clean:
 	rm -rf $(addsuffix .txt,$(PROGRAMS))
 	rm -rf $(OBJDIR)/
 
+ifneq ($(MAKECMDGOALS),clean)
 -include $(OBJDIR)/depends.txt
+endif

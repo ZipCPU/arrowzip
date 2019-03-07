@@ -267,8 +267,8 @@
 // whether or not the 8 accounting timers are also included.  Set these to
 // include the respective peripherals, comment them out not to.
 //
-`define	INCLUDE_DMA_CONTROLLER
-`define	INCLUDE_ACCOUNTING_COUNTERS
+// `define	INCLUDE_DMA_CONTROLLER
+// `define	INCLUDE_ACCOUNTING_COUNTERS
 //
 //
 `define	DEBUG_SCOPE

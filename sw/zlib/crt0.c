@@ -131,7 +131,7 @@
 // however: 1) It obscures for any readers of this code what is actually
 // happening, and 2) it makes the code dependent upon yet another piece of the
 // hardware design working.  For these reasons, we allow you to turn it off.
-#ifdef _HAS_ZIPSYS_DMA
+#ifdef _HAVE_ZIPSYS_DMA
 #define	USE_DMA
 #endif
 
@@ -182,8 +182,8 @@ asm("\t.section\t.start,\"ax\",@progbits\n"
 	//
 "_graceful_kernel_exit:"	"\t; Halt on any return from main--gracefully\n"
 	"\tJSR\texit\n"	"\t; Call the _exit as part of exiting\n"
-"\t.global\t_exit\n"
-"_exit:\n"
+"\t.global\t_hw_shutdown\n"
+"_hw_shutdown:\n"
 	"\tNEXIT\tR1\n"		"\t; If in simulation, call an exit function\n"
 "_kernel_is_dead:"		"\t; Halt the CPU\n"
 	"\tHALT\n"		"\t; We should *never* continue following a\n"
