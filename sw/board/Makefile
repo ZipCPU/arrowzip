@@ -37,7 +37,7 @@
 ##
 ##
 .PHONY: all
-PROGRAMS := hello cputest
+PROGRAMS := hello cputest memtest
 all:	$(PROGRAMS)
 #
 #
@@ -91,7 +91,10 @@ $(OBJDIR)/cputest.o: cputest.c
 	$(mk-objdir)
 	$(CC) $(CFLAGS) -c -Wa,-cis -fno-builtin $< -o $@
 
-cputest: $(OBJDIR)/cputest.o board.ld
+cputest: $(OBJDIR)/cputest.o bkram.ld
+	$(CC) $(CFLAGS) $(LBKRAM) $< -o $@
+
+memtest: $(OBJDIR)/memtest.o bkram.ld
 	$(CC) $(CFLAGS) $(LBKRAM) $< -o $@
 
 

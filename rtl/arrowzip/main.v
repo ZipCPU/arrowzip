@@ -157,7 +157,7 @@ module	main(i_clk, i_reset,
 // @MAIN.IODECL keys.
 //
 	input	wire		i_clk;
-// verilator lint_off UNUSED
+	// verilator lint_off UNUSED
 	input	wire		i_reset;
 	// verilator lint_on UNUSED
 	// SPIO interface
@@ -182,7 +182,7 @@ module	main(i_clk, i_reset,
 	output	wire		o_uart_tx;
 	// Make Verilator happy ... defining bus wires for lots of components
 	// often ends up with unused wires lying around.  We'll turn off
-	// Verilator's lint warning here that checks for unused wires.
+	// Ver1lator's lint warning here that checks for unused wires.
 	// verilator lint_off UNUSED
 
 
@@ -509,17 +509,17 @@ module	main(i_clk, i_reset,
 			default: wb_many_ack <= (wb_cyc);
 		endcase
 
+	reg		r_wb_sio_ack;
+	reg	[31:0]	r_wb_sio_data;
+
 	assign	wb_sio_stall = 1'b0;
+
 	initial r_wb_sio_ack = 1'b0;
 	always	@(posedge i_clk)
 		r_wb_sio_ack <= (wb_stb)&&(wb_sio_sel);
 	assign	wb_sio_ack = r_wb_sio_ack;
-	reg	r_wb_sio_ack;
-	reg	[31:0]	r_wb_sio_data;
+
 	always	@(posedge i_clk)
-		// mask        = 00000007
-		// lgdw        = 2
-		// unused_lsbs = 0
 		casez( wb_addr[2:0] )
 			3'h0: r_wb_sio_data <= buildtime_data;
 			3'h1: r_wb_sio_data <= buserr_data;
@@ -530,20 +530,25 @@ module	main(i_clk, i_reset,
 		endcase
 	assign	wb_sio_data = r_wb_sio_data;
 
-	assign	wb_dio_stall = 1'b0;
 	reg	[1:0]	r_wb_dio_ack;
+	reg	[1:0]	r_wb_dio_bus_select;
+	reg	[31:0]	r_wb_dio_data;
+	assign	wb_dio_stall = 1'b0;
 	always	@(posedge i_clk)
 		r_wb_dio_ack <= { r_wb_dio_ack[0], (wb_stb)&&(wb_dio_sel) };
 	assign	wb_dio_ack = r_wb_dio_ack[1];
-	reg	[31:0]	r_wb_dio_data;
-	always	@(posedge i_clk)
-		casez({		bustimer_ack,
-				watchdog_ack	}) // rtc default
-			2'b1?: r_wb_dio_data <= bustimer_data;
-			2'b01: r_wb_dio_data <= watchdog_data;
-			default: r_wb_dio_data <= rtc_data;
+	always @(posedge i_clk)
+		r_wb_dio_bus_select <= wb_addr[4:3];
 
-		endcase
+	always	@(posedge i_clk)
+	casez(r_wb_dio_bus_select)
+		2'b00: r_wb_dio_data <= bustimer_data;
+		2'b01: r_wb_dio_data <= watchdog_data;
+		2'b10: r_wb_dio_data <= rtc_data;
+		default: r_wb_dio_data <= 0;
+
+	endcase
+
 	assign	wb_dio_data = r_wb_dio_data;
 
 	//
@@ -583,28 +588,48 @@ module	main(i_clk, i_reset,
 	// true.  Although we might choose to return zeros in that case, by
 	// returning something we can skimp a touch on the logic.
 	//
-	// Any peripheral component with a @SLAVE.TYPE value will be listed
-	// here.
+	// Any peripheral component with a @SLAVE.TYPE value of either OTHER
+	// or MEMORY will automatically be listed here.  In addition, the
+	// bus responses from @SLAVE.TYPE SINGLE (_sio_) and/or DOUBLE
+	// (_dio_) may also be listed here, depending upon components are
+	// connected to them.
 	//
-	always @(posedge i_clk)
-	begin
-		casez({		flashcfg_ack,
-				sdramdbg_ack,
-				console_ack,
-				wb_sio_ack,
-				wb_dio_ack,
-				bkram_ack,
-				flash_ack	})
-			7'b1??????: wb_idata <= flashcfg_data;
-			7'b01?????: wb_idata <= sdramdbg_data;
-			7'b001????: wb_idata <= console_data;
-			7'b0001???: wb_idata <= wb_sio_data;
-			7'b00001??: wb_idata <= wb_dio_data;
-			7'b000001?: wb_idata <= bkram_data;
-			7'b0000001: wb_idata <= flash_data;
-			default: wb_idata <= sdram_data;
+	reg [2:0]	r_wb_bus_select;
+	always	@(posedge i_clk)
+	if (wb_stb && ! wb_stall)
+		casez(wb_addr[22:19])
+			// 01e00000 & 00200000, flashcfg
+			4'b0_001: r_wb_bus_select <= 3'd0;
+			// 01e00000 & 00400000, sdramdbg
+			4'b0_010: r_wb_bus_select <= 3'd1;
+			// 01e00000 & 00600000, console
+			4'b0_011: r_wb_bus_select <= 3'd2;
+			// 01e00000 & 00800000, wb_sio
+			4'b0_100: r_wb_bus_select <= 3'd3;
+			// 01e00000 & 00a00000, wb_dio
+			4'b0_101: r_wb_bus_select <= 3'd4;
+			// 01e00000 & 00c00000, bkram
+			4'b0_110: r_wb_bus_select <= 3'd5;
+			// 01800000 & 01000000, flash
+			4'b1_0??: r_wb_bus_select <= 3'd6;
+			// 01800000 & 01800000, sdram
+			4'b1_1??: r_wb_bus_select <= 3'd7;
+			default: begin end
 		endcase
-	end
+
+	always @(posedge i_clk)
+	casez(r_wb_bus_select)
+		3'd0: wb_idata <= flashcfg_data;
+		3'd1: wb_idata <= sdramdbg_data;
+		3'd2: wb_idata <= console_data;
+		3'd3: wb_idata <= wb_sio_data;
+		3'd4: wb_idata <= wb_dio_data;
+		3'd5: wb_idata <= bkram_data;
+		3'd6: wb_idata <= flash_data;
+		3'd7: wb_idata <= sdram_data;
+		default: wb_idata <= sdram_data;
+	endcase
+
 	assign	wb_stall =	((flashcfg_sel)&&(flashcfg_stall))
 				||((sdramdbg_sel)&&(sdramdbg_stall))
 				||((console_sel)&&(console_stall))
@@ -659,6 +684,9 @@ module	main(i_clk, i_reset,
 		endcase
 
 	//
+	// No class DOUBLE peripherals on the "hb" bus
+	//
+	//
 	// Finally, determine what the response is from the hb bus
 	// bus
 	//
@@ -689,8 +717,11 @@ module	main(i_clk, i_reset,
 	// true.  Although we might choose to return zeros in that case, by
 	// returning something we can skimp a touch on the logic.
 	//
-	// Any peripheral component with a @SLAVE.TYPE value will be listed
-	// here.
+	// Any peripheral component with a @SLAVE.TYPE value of either OTHER
+	// or MEMORY will automatically be listed here.  In addition, the
+	// bus responses from @SLAVE.TYPE SINGLE (_sio_) and/or DOUBLE
+	// (_dio_) may also be listed here, depending upon components are
+	// connected to them.
 	//
 	always @(posedge i_clk)
 		if (hb_dwb_ack)
@@ -907,7 +938,7 @@ module	main(i_clk, i_reset,
 `ifdef	SDRAM_ACCESS
 	wbsdram	sdram(i_clk,
 		wb_cyc, (wb_stb)&&(sdram_sel),
-			wb_we, wb_addr[21:0], wb_data, wb_sel,
+			wb_we, wb_addr[23-3:0], wb_data, wb_sel,
 			sdram_ack, sdram_stall, sdram_data,
 		o_ram_cs_n, o_ram_cke, o_ram_ras_n, o_ram_cas_n, o_ram_we_n,
 			o_ram_bs, o_ram_addr,
@@ -941,7 +972,7 @@ module	main(i_clk, i_reset,
 	assign	buserr_data = { {(32-2-23){1'b0}},
 			r_buserr_addr, 2'b00 };
 `ifdef	SDRAMSCOPE_SCOPE
-	wbscope #(.LGMEM(6),
+	wbscope #(.LGMEM(10),
 		.SYNCHRONOUS(1))
 	sdramdbgi(i_clk, 1'b1, sdram_debug[18], sdram_debug,
 		i_clk, wb_cyc, (wb_stb)&&(sdramdbg_sel), wb_we,

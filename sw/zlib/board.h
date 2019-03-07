@@ -81,9 +81,15 @@ typedef	struct	RTCLIGHT_S	{
 #ifndef	SCOPE_H
 #define	SCOPE_H
 
+#define WBSCOPE_NO_RESET        0x80000000u
+#define WBSCOPE_TRIGGER         (WBSCOPE_NO_RESET|0x08000000u)
+#define WBSCOPE_MANUAL          (WBSCOPE_TRIGGER)
+#define WBSCOPE_DISABLE         0x04000000u
+
 typedef	struct	SCOPE_S {
 	unsigned s_ctrl, s_data;
 } SCOPE;
+
 #endif
 
 

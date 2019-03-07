@@ -118,7 +118,7 @@ public:
 		m_core->i_clk = 0;
 		m_time_ps+= 6250;
 		eval();
-		if (m_trace) { m_trace->dump(m_time_ps); m_trace->flush(); }
+		if (m_trace) m_trace->dump(m_time_ps);
 
 		// Call to see if any simulation components need
 		// to advance their inputs based upon this clock

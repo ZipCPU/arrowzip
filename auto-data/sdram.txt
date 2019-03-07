@@ -38,7 +38,7 @@
 @PREFIX=sdram
 @DEVID=SDRAM
 @ACCESS=@$(DEVID)_ACCESS
-@$LGRAMSZ.EXPR=23
+@$LGRAMSZ=23
 @$NADDR=(1<<(@$LGRAMSZ-2))
 @$NBYTES=(1<<@$LGRAMSZ)
 @NBYTES.FORMAT=0x%08x
@@ -114,7 +114,7 @@
 @MAIN.INSERT=
 	wbsdram	sdram(i_clk,
 		wb_cyc, (wb_stb)&&(sdram_sel),
-			wb_we, wb_addr[21:0], wb_data, wb_sel,
+			wb_we, wb_addr[@$(LGRAMSZ)-3:0], wb_data, wb_sel,
 			@$(PREFIX)_ack, @$(PREFIX)_stall, @$(PREFIX)_data,
 		o_ram_cs_n, o_ram_cke, o_ram_ras_n, o_ram_cas_n, o_ram_we_n,
 			o_ram_bs, o_ram_addr,

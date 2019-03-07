@@ -71,7 +71,7 @@ class	SDRAMSCOPE : public SCOPE {
 	// int	m_oword[2], m_iword[2], m_p;
 public:
 	SDRAMSCOPE(FPGA *fpga, unsigned addr, bool vecread)
-		: SCOPE(fpga, addr, true, vecread) {};
+		: SCOPE(fpga, addr, false, vecread) {};
 	~SDRAMSCOPE(void) {}
 	virtual	void	decode(DEVBUS::BUSW val) const {
 		int	cmd;
@@ -151,7 +151,7 @@ public:
 };
 
 int main(int argc, char **argv) {
-#ifndef	R_FLASHSCOPE
+#ifndef	R_SDRAMSCOPE
 	printf(
 "This design was not built with a flash scope attached to the WBSDRAM\n"
 "design component.\n"
@@ -166,7 +166,7 @@ int main(int argc, char **argv) {
 	signal(SIGSTOP, closeup);
 	signal(SIGHUP, closeup);
 
-	SDRAMSCOPE *scope = new SDRAMSCOPE(m_fpga, WBSCOPE, false);
+	SDRAMSCOPE *scope = new SDRAMSCOPE(m_fpga, WBSCOPE, true);
 	scope->set_clkfreq_hz(CLKFREQHZ);
 	if (!scope->ready()) {
 		printf("Scope is not yet ready:\n");

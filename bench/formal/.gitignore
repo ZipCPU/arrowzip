@@ -2,3 +2,5 @@
 memdev/
 dualflexpress/
 *.ys
+wbsdram*/
+mcve*

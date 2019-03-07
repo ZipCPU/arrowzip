@@ -1,0 +1,17 @@
+[options]
+mode prove
+depth 41
+
+[engines]
+smtbmc boolector
+# abc pdr
+
+[script]
+read -formal wbsdram.v
+read -formal fwb_slave.v
+prep -top wbsdram
+opt_merge -share_all
+
+[files]
+../../rtl/arrowzip/wbsdram.v
+fwb_slave.v

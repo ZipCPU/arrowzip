@@ -64,7 +64,11 @@
 // BUILDTIME doesnt need to include builddate.v a second time
 // `include "builddate.v"
 @MAIN.INSERT=
+`ifdef	VERILATOR
+	assign	@$(PREFIX)_data = `BUILDTIME ^ 32'h8000_0000;
+`else
 	assign	@$(PREFIX)_data = `BUILDTIME;
+`endif
 	assign	@$(PREFIX)_ack = wb_stb && @$(PREFIX)_sel;
 	assign	@$(PREFIX)_stall = 1'b0;
 @REGS.N=1

@@ -76,5 +76,5 @@ typedef	struct	RTCLIGHT_S	{
 @BDEF.OSVAL=static volatile @$BDEF.IOTYPE *const @$(BDEF.IONAME) = ((@$BDEF.IOTYPE *)@$[0x%08x](REGBASE));
 #
 #
-@RTL.MAKE.GROUPD=rtc
+@RTL.MAKE.GROUP=@$(DEVID)
 @RTL.MAKE.FILES=rtclight.v rtcbare.v rtcalarm.v rtcstopwatch.v rtctimer.v

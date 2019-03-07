@@ -1,0 +1,168 @@
+[*]
+[*] GTKWave Analyzer v3.3.98 (w)1999-2018 BSI
+[*] Thu Mar  7 18:39:48 2019
+[*]
+[dumpfile] "/home/dan/work/rnd/opencores/arrowzip/trunk/bench/formal/wbsdram/engine_0/trace.vcd"
+[dumpfile_mtime] "Thu Mar  7 18:37:57 2019"
+[dumpfile_size] 63873
+[savefile] "/home/dan/work/rnd/opencores/arrowzip/trunk/bench/formal/wbsdram.gtkw"
+[timestart] 187
+[size] 1920 1054
+[pos] -1 -1
+*-5.000000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+[sst_width] 196
+[signals_width] 214
+[sst_expanded] 1
+[sst_vpaned_height] 313
+@28
+wbsdram.f_past_valid
+wbsdram.f_reset
+wbsdram.i_clk
+@200
+-
+@28
+[color] 3
+wbsdram.i_wb_cyc
+[color] 3
+wbsdram.i_wb_stb
+[color] 3
+wbsdram.i_wb_we
+@22
+[color] 3
+wbsdram.i_wb_addr[21:0]
+[color] 3
+wbsdram.i_wb_data[31:0]
+[color] 3
+wbsdram.i_wb_sel[3:0]
+@28
+[color] 2
+wbsdram.o_wb_ack
+@22
+[color] 2
+wbsdram.o_wb_data[31:0]
+@28
+[color] 2
+wbsdram.o_wb_stall
+@200
+-
+@28
+wbsdram.o_ram_cke
+[color] 3
+wbsdram.o_ram_cs_n
+[color] 3
+wbsdram.o_ram_cas_n
+[color] 3
+wbsdram.o_ram_ras_n
+[color] 3
+wbsdram.o_ram_we_n
+@22
+wbsdram.o_ram_addr[11:0]
+@28
+wbsdram.o_ram_bs[1:0]
+@22
+wbsdram.o_ram_data[15:0]
+@28
+wbsdram.o_ram_dmod
+wbsdram.o_ram_dqm[1:0]
+@22
+wbsdram.i_ram_data[15:0]
+@200
+-
+@29
+[color] 7
+wbsdram.maintenance_mode
+@23
+[color] 7
+wbsdram.maintenance_clocks[3:0]
+@29
+[color] 7
+wbsdram.maintenance_clocks_zero
+@23
+[color] 7
+wbsdram.startup_idle[15:0]
+@29
+[color] 7
+wbsdram.startup_hold
+[color] 7
+wbsdram.m_state[1:0]
+[color] 7
+wbsdram.m_ram_cs_n
+[color] 7
+wbsdram.m_ram_cas_n
+[color] 7
+wbsdram.m_ram_ras_n
+[color] 7
+wbsdram.m_ram_we_n
+[color] 7
+wbsdram.m_ram_dmod
+@23
+[color] 7
+wbsdram.m_ram_addr[11:0]
+@200
+-
+@28
+wbsdram.bank_active<0>[2:0]
+wbsdram.bank_active<1>[2:0]
+wbsdram.bank_active<2>[2:0]
+wbsdram.bank_active<3>[2:0]
+@22
+wbsdram.bank_row<0>[11:0]
+wbsdram.bank_row<1>[11:0]
+wbsdram.bank_row<2>[11:0]
+wbsdram.bank_row<3>[11:0]
+@28
+wbsdram.bus_cyc
+wbsdram.clocks_til_idle[2:0]
+@22
+wbsdram.f_acks_pending[3:0]
+wbsdram.f_cmd[4:0]
+@28
+wbsdram.f_ispending
+@22
+wbsdram.f_nacks[4:0]
+wbsdram.f_next_addr[21:0]
+@28
+wbsdram.f_next_bank[1:0]
+@22
+wbsdram.f_next_row[11:0]
+wbsdram.f_nreqs[4:0]
+wbsdram.f_outstanding[4:0]
+wbsdram.f_pending[59:0]
+wbsdram.f_request[59:0]
+@28
+wbsdram.f_this_bank[1:0]
+@22
+wbsdram.f_this_row[12:0]
+wbsdram.fwd_addr[21:0]
+@28
+wbsdram.fwd_bank_valid
+wbsdram.in_refresh
+wbsdram.in_refresh_clk[2:0]
+@22
+wbsdram.last_ram_data[15:0]
+@28
+wbsdram.need_refresh
+wbsdram.nxt_dmod
+wbsdram.pending
+@22
+wbsdram.r_addr[21:0]
+@28
+wbsdram.r_bank_valid
+@22
+wbsdram.r_barrell_ack[5:0]
+wbsdram.r_data[31:0]
+@28
+wbsdram.r_pending
+@22
+wbsdram.r_sel[3:0]
+@28
+wbsdram.r_we
+@22
+wbsdram.refresh_clk[9:0]
+@28
+wbsdram.refresh_cmd
+wbsdram.trigger
+@22
+wbsdram.unused[7:0]
+[pattern_trace] 1
+[pattern_trace] 0
