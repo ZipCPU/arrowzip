@@ -67,6 +67,7 @@ class	SDRAMSIM {
 	int	m_clocks_till_idle;
 	bool	m_next_wr;
 	unsigned	m_fail;
+	bool		m_debug;
 public:
 	SDRAMSIM(void) {
 		m_mem = new short[SDRAMSZB/2]; // 32 MB, or 16 Mshorts
@@ -88,6 +89,8 @@ public:
 
 		m_next_wr = true;
 		m_fail = 0;
+
+		m_debug = true;
 	}
 
 	~SDRAMSIM(void) {

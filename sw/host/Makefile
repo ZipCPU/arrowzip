@@ -38,12 +38,12 @@
 ##
 .PHONY: all
 PROGRAMS := wbregs netuart zipload zipstate zipdbg dumpflash flashid
-SCOPES := flashscope
+SCOPES := flashscope sdramscope
 all: $(PROGRAMS) $(SCOPES)
 CXX := g++
 OBJDIR := obj-pc
 BUSSRCS := hexbus.cpp llcomms.cpp regdefs.cpp byteswap.cpp
-SOURCES := wbregs.cpp netuart.cpp flashdrvr.cpp		\
+SOURCES := wbregs.cpp netuart.cpp flashdrvr.cpp	flashscope.cpp sdramscope.cpp \
 	 $(BUSSRCS) zipload.cpp zipstate.cpp zipdbg.cpp
 	# flashdrvr.cpp
 HEADERS := llcomms.h port.h hexbus.h devbus.h
@@ -92,6 +92,8 @@ zipload: $(OBJDIR)/zipload.o $(BUSOBJS) $(OBJDIR)/flashdrvr.o $(OBJDIR)/zipelf.o
 # These depend upon the scopecls.o, the bus objects, as well as their
 # main file(s).
 flashscope: $(OBJDIR)/flashscope.o $(BUSOBJS) $(OBJDIR)/scopecls.o
+	$(CXX) $(CFLAGS) $^ $(LIBS) -o $@
+sdramscope: $(OBJDIR)/sdramscope.o $(BUSOBJS) $(OBJDIR)/scopecls.o
 	$(CXX) $(CFLAGS) $^ $(LIBS) -o $@
 
 

@@ -61,7 +61,7 @@ CFLAGS	:= -Og -g -Wall $(INCS) $(VDEFS)
 #
 # A list of our sources and headers
 #
-SIMSOURCES:= flashsim.cpp dbluartsim.cpp zipelf.cpp byteswap.cpp
+SIMSOURCES:= flashsim.cpp sdramsim.cpp dbluartsim.cpp zipelf.cpp byteswap.cpp
 SIMOBJECTS:= $(addprefix $(OBJDIR)/,$(subst .cpp,.o,$(SIMSOURCES)))
 SIMHEADERS:= $(foreach header,$(subst .cpp,.h,$(SIMSOURCES)),$(wildcard $(header)))
 VOBJS   := $(OBJDIR)/verilated.o $(OBJDIR)/verilated_vcd_c.o

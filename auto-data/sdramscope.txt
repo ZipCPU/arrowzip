@@ -1,13 +1,11 @@
 ################################################################################
 ##
-## Filename:	auto-data/Makefile
+## Filename: 	sdramscope.txt
 ##
 ## Project:	ArrowZip, a demonstration of the Arrow MAX1000 FPGA board
 ##
-## Purpose:	To direct the build of the autofpga automatically generated
-##		files.  The various configuration files are the *.txt files
-##	found in this directory.
-##
+## Purpose:	Tells AutoFPGA how to create and attach a Wishbone Scope to the
+##		SDRAM controller within the design.
 ##
 ## Creator:	Dan Gisselquist, Ph.D.
 ##		Gisselquist Technology, LLC
@@ -38,35 +36,14 @@
 ################################################################################
 ##
 ##
-.PHONY: all
-all:	data
-#
-# Could also depend upon load, if desired, but not necessary
-#
-# This is the list of components that will form our project.  Each file consists
-# of parts and pieces of our project that autofpga will copy/paste into our
-# main project files.
-#
-BASE    := global.txt dlyarbiter.txt
-AUX     := version.txt buserr.txt pic.txt pwrcount.txt
-IO      := spio.txt # gpio.txt
-RTC     := rtclight.txt # rtcdate.txt
-DBGBUS  := hbconsole.txt
-MEMORY  := bkram.txt flexpress.txt sdram.txt
-CPU     := zipbones.txt
-SCOPES  := sdramscope.txt # flashscope.txt # cpuscope.txt
-LDSCRIPT:= mem_flash_bkram.txt mem_bkram_only.txt mem_sdram_bkram.txt
-DATA := clock.txt $(BASE) $(AUX) $(IO) $(RTC)			\
-	$(DBGBUS) $(MEMORY) $(CPU) $(SCOPES) $(LDSCRIPT)
-
-AUTOFPGA := autofpga
-$(AUTOFPGA):
-
-.PHONY: data
-data: $(AUTOFPGA) $(DATA)
-	$(AUTOFPGA) -d -o . $(DATA)
-
-clean:
-	rm -f toplevel.v main.v regdefs.h regdefs.cpp board.h board.ld
-	rm -f rtl.make.inc main_tb.cpp
-	rm -f dump.txt
+@PREFIX=sdramdbg
+@NADDR=2
+@DEVID=SDRAMSCOPE
+@DEPENDS=SDRAM_ACCESS
+@TARGET=sdram
+@TRIGGER=sdram_debug[18]
+@MAIN.DEFNS=
+@LOG_CAPTURE_SIZE=6
+@INT.FLASHDBG.WIRE=@$(PREFIX)_int
+@INT.FLASHDBG.PIC=buspic
+@INCLUDEFILE=wbscope.txt

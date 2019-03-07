@@ -528,17 +528,19 @@ module	wbsdram(i_clk,
 				m_ram_addr[10] <= 1'b0;
 
 				m_state <= `RAM_INITIAL_REFRESH;
-				maintenance_clocks <= 4'ha;
+				maintenance_clocks <= 4'hc;
 				maintenance_clocks_zero <= 1'b0;
 			end
 		end else if (m_state == `RAM_INITIAL_REFRESH)
 		begin
 			// Refresh command
-			if (maintenance_clocks > 4'h8)
+			if (maintenance_clocks > 4'ha)
 				// Wait two clocks first
 				m_ram_cs_n <= 1'b1;
-			else
+			else if (maintenance_clocks > 4'h2)
 				m_ram_cs_n  <= 1'b0;
+			else
+				m_ram_cs_n <= 1'b1;
 			m_ram_ras_n <= 1'b0;
 			m_ram_cas_n <= 1'b0;
 			m_ram_we_n  <= 1'b1;
@@ -550,22 +552,22 @@ module	wbsdram(i_clk,
 	end
 
 	always @(posedge i_clk)
-		if (nxt_dmod)
-			o_ram_data <= r_data[15:0];
-		else
-			o_ram_data <= r_data[31:16];
+	if (nxt_dmod)
+		o_ram_data <= r_data[15:0];
+	else
+		o_ram_data <= r_data[31:16];
 
 	always @(posedge i_clk)
-		if (maintenance_mode)
-			o_ram_dqm <= 2'b11;
-		else if (r_we)
-		begin
-			if (nxt_dmod)
-				o_ram_dqm <= ~r_sel[1:0];
-			else
-				o_ram_dqm <= ~r_sel[3:2];
-		end else
-			o_ram_dqm <= 2'b00;
+	if (maintenance_mode)
+		o_ram_dqm <= 2'b11;
+	else if (r_we)
+	begin
+		if (nxt_dmod)
+			o_ram_dqm <= ~r_sel[1:0];
+		else
+			o_ram_dqm <= ~r_sel[3:2];
+	end else
+		o_ram_dqm <= 2'b00;
 
 `ifdef	VERILATOR
 	// While I hate to build something that works one way under Verilator
@@ -580,13 +582,14 @@ module	wbsdram(i_clk,
 		ram_data <= i_ram_data;
 	always @(posedge i_clk)
 		last_ram_data <= ram_data;
+	assign	o_wb_data = { last_ram_data, ram_data };
 `else
 	reg	[15:0]	last_ram_data;
 	always @(posedge i_clk)
 		last_ram_data <= i_ram_data;
+	assign	o_wb_data = { last_ram_data, i_ram_data };
 `endif
 	assign	o_wb_ack  = r_barrell_ack[0];
-	assign	o_wb_data = { last_ram_data, i_ram_data };
 
 	//
 	// The following outputs are not necessary for the functionality of

@@ -56,7 +56,7 @@ short	SDRAMSIM::operator()(int clk, int cke, int cs_n, int ras_n, int cas_n, int
 	else if (!clk) // If the clock is zero, return our last value
 		return m_last_value; // Always called w/clk=1, thus never here
 	if (!cke) {
-		fprintf(stderr, "This simulation only supports CKE high!\n");
+		fprintf(stderr, "SDRAM: This SDRAM simulation only supports CKE high!\n");
 		fprintf(stderr, "\tCKE   = %d\n", cke);
 		fprintf(stderr, "\tCS_n  = %d\n", cs_n);
 		fprintf(stderr, "\tRAS_n = %d\n", ras_n);
@@ -70,48 +70,57 @@ short	SDRAMSIM::operator()(int clk, int cke, int cs_n, int ras_n, int cas_n, int
 		if (m_clocks_till_idle > 0)
 			m_clocks_till_idle--;
 		if (m_pwrup == 0) {
-			assert((ras_n)&&(cas_n)&&(we_n));
+			assert((cs_n)&&(ras_n)&&(cas_n)&&(we_n)&&(dqm==3));
 			if (m_clocks_till_idle == 0) {
 				m_pwrup++;
-				// printf("Successful power up wait, moving to state #1\n");
+				if (m_debug) printf("SDRAM: Successful power up wait, moving to state #1\n");
 			}
 		} else if (m_pwrup == 1) {
 			if ((!cs_n)&&(!ras_n)&&(cas_n)&&(!we_n)&&(addr&0x0400)) {
 				// Wait until a precharge all banks command
 				m_pwrup++;
-				// printf("Successful precharge command, moving to state #2\n");
+				if (m_debug) printf("SDRAM: Successful precharge command, moving to state #2\n");
 				m_clocks_till_idle = 8;
 			}
 		} else if (m_pwrup == 2) {
-			// Need 8 auto refresh cycles before or after the mode
-			// set command.  We'll insist they be before.
-			if (m_clocks_till_idle == 0) {
+			static	bool	mode_is_set = false;
+			static	int	refresh_cycles = 0;
+
+			if ((!cs_n)&&(!ras_n)&&(!cas_n)&&(!we_n)) {
+				assert(!mode_is_set);
+				assert((refresh_cycles == 0)||(refresh_cycles == 8));
+				// mode set
+				if (m_debug) printf("SDRAM: Mode set: %08x\n", addr);
+				assert(addr == 0x021);
+				mode_is_set = true;
+			}
+
+			if ((!cs_n)&&(!ras_n)&&(!cas_n)&&(we_n)) {
+				refresh_cycles++;
+				assert(refresh_cycles <= 8);
+
+				if (m_debug) printf("SDRAM: #%d refresh cycles\n", refresh_cycles);
+			}
+
+			if (mode_is_set && refresh_cycles >= 8) {
+				const int tRSC = 2;
 				m_pwrup++;
-				// printf("Successful initial auto-refresh, waiting for mode-set\n");
 				for(int i=0; i<m_nrefresh; i++)
 					m_refresh_time[i] = MAX_REFRESH_TIME;
-			} else
-				assert((!cs_n)&&(!ras_n)&&(!cas_n)&&(we_n));
-		} else if (m_pwrup == 3) {
-			const int tRSC = 2;
-			if ((!cs_n)&&(!ras_n)&&(!cas_n)&&(!we_n)){
-				// mode set
-				// printf("Mode set: %08x\n", addr);
-				assert(addr == 0x021);
-				m_pwrup++;
-				// printf("Successful mode set, moving to state #3, tRSC = %d\n", tRSC);
 				m_clocks_till_idle=tRSC;
+
+				if (m_debug) printf("SDRAM: Moving to power up state 3\n");
 			}
-		} else if (m_pwrup == 4) {
+		} else if (m_pwrup == 3) {
 			assert(cs_n);
 			if (m_clocks_till_idle == 0) {
 				m_pwrup = POWERED_UP_STATE;
 				m_clocks_till_idle = 0;
-				// printf("Successful settup!  SDRAM switching to operational\n");
+				if (m_debug) printf("SDRAM: Successful settup!  SDRAM switching to operational\n");
 			} else if (m_clocks_till_idle == 1) {
 				;
-			} else assert(0 && "Should never get here!");
-		} else if (m_pwrup == 5) {
+			} else assert(0 && "SDRAM: Should never get here!");
+		} else if (m_pwrup == 4) {
 			if ((!cs_n)&&(!ras_n)&&(!cas_n)&&(we_n)) {
 				if (m_clocks_till_idle == 0) {
 					m_pwrup = POWERED_UP_STATE;
@@ -154,7 +163,7 @@ short	SDRAMSIM::operator()(int clk, int cke, int cs_n, int ras_n, int cas_n, int
 		}
 
 		if ((m_clocks_till_idle > 0)&&(m_next_wr)) {
-			// printf("SDRAM[%08x] <= %04x\n", m_wr_addr, data & 0x0ffff);
+			if (m_debug) printf("SDRAM[%08x] <= %04x (BM=%d)\n", m_wr_addr, data & 0x0ffff, (dqm&3)^3);
 			int	waddr = m_wr_addr++, memval;
 			memval = m_mem[waddr];
 			if ((dqm&3)==0)
@@ -196,10 +205,10 @@ short	SDRAMSIM::operator()(int clk, int cke, int cs_n, int ras_n, int cas_n, int
 				assert(0 == (bs & (~3))); // Assert w/in bounds
 				m_bank_status[bs] &= 0x03; // Close the bank
 
-				// printf("Precharging bank %d\n", bs);
+				if (m_debug) printf("SDRAM: Precharging bank %d\n", bs);
 			}
 		} else if ((!cs_n)&&(!ras_n)&&(cas_n)&&(we_n)) {
-			// printf("Activating bank %d\n", bs);
+			if (m_debug) printf("SDRAM: Activating bank %d\n", bs);
 			// Activate a bank!
 			if (0 != (bs & (~3))) {
 				m_fail = 2;
@@ -215,7 +224,7 @@ short	SDRAMSIM::operator()(int clk, int cke, int cs_n, int ras_n, int cas_n, int
 			m_bank_open_time[bs] = MAX_BANKOPEN_TIME;
 			m_bank_row[bs] = addr;
 		} else if ((!cs_n)&&(ras_n)&&(!cas_n)) {
-			// printf("R/W Op\n");
+			if (m_debug) printf("SDRAM: R/W Op\n");
 			if (!we_n) {
 				// Initiate a write
 				assert(0 == (bs & (~3))); // Assert w/in bounds
@@ -228,7 +237,7 @@ short	SDRAMSIM::operator()(int clk, int cke, int cs_n, int ras_n, int cas_n, int
 				m_wr_addr |= (addr & 0x01ff);
 
 				assert(driv);
-				// printf("SDRAM[%08x] <= %04x\n", m_wr_addr, data & 0x0ffff);
+				if (m_debug) printf("SDRAM: SDRAM[%08x] <= %04x\n", m_wr_addr, data & 0x0ffff);
 				m_mem[m_wr_addr++] = data;
 				m_clocks_till_idle = 2;
 				m_next_wr = true;
@@ -250,13 +259,13 @@ short	SDRAMSIM::operator()(int clk, int cke, int cs_n, int ras_n, int cas_n, int
 				rd_addr |= (addr & 0x01ff);
 
 				assert(!driv);
-				// printf("SDRAM.Q[%2d] %04x <= SDRAM[%08x]\n",
-					// (m_qloc+3)&m_qmask,
-					// m_mem[rd_addr] & 0x0ffff, rd_addr);
+				if (m_debug) printf("SDRAM.Q[%2d] %04x <= SDRAM[%08x]\n",
+					(m_qloc+3)&m_qmask,
+					m_mem[rd_addr] & 0x0ffff, rd_addr);
 				m_qdata[(m_qloc+3)&m_qmask] = m_mem[rd_addr++];
-				// printf("SDRAM.Q[%2d] %04x <= SDRAM[%08x]\n",
-					// (m_qloc+4)&m_qmask,
-					// m_mem[rd_addr] & 0x0ffff, rd_addr);
+				if (m_debug) printf("SDRAM.Q[%2d] %04x <= SDRAM[%08x]\n",
+					(m_qloc+4)&m_qmask,
+					m_mem[rd_addr] & 0x0ffff, rd_addr);
 				m_qdata[(m_qloc+4)&m_qmask] = m_mem[rd_addr++];
 				m_clocks_till_idle = 2;
 

@@ -1,6 +1,6 @@
 /*******************************************************************************
 *
-* Filename:	sdram.ld
+* Filename:	board.ld
 *
 * Project:	ArrowZip, a demonstration of the Arrow MAX1000 FPGA board
 *
@@ -62,36 +62,41 @@ _bkram    = ORIGIN(bkram);
 _flash    = ORIGIN(flash);
 _sdram    = ORIGIN(sdram);
 /* LD.DEFNS from zipmaster.txt */
-_kram  = ORIGIN(bkram); /* No high-speed kernel RAM */
-_ram   = ORIGIN(sdram);
-_rom   = 0;
+_kram  = 0; /* No high-speed kernel RAM */
+_ram   = ORIGIN(bkram);
+_rom   = ORIGIN(flash);
 _top_of_stack = ORIGIN(bkram) + LENGTH(bkram);
 
 
 /* LD.SCRIPT from zipmaster.txt */
 SECTIONS
 {
-	.rocode ORIGIN(bkram): ALIGN(4) {
-		_boot_address = .;
-		*(.start) *(.boot)
-	} > bkram
-	_kram_start = . ;
-	.kernel : ALIGN_WITH_INPUT {
-		*(.kernel)
-		*(.text.startup)
-		_kram_end = . ;
-		}> bkram
-	_ram_image_start = . ;
-	.ramcod : ALIGN_WITH_INPUT {
-		*(.text*)
-		*(.rodata*) *(.strings)
-		*(.data) *(COMMON)
-		_ram_image_end = . ;
-		}> sdram
-	.bss : ALIGN_WITH_INPUT {
-		*(.bss)
-		_bss_image_end = . ;
-		} > sdram
-	_top_of_heap = .;
+	/*
+	 * This particular board has *very* little block RAM to work
+	 * with.  Therefore, we're going to place as much as we can
+	 * into the flash, and leave only our data structures in the
+	 * block RAM.
+	 */
+       .rocode 0x01000000 : ALIGN(4) {
+               _boot_address = .;
+               *(.start) *(.boot)
+               *(.text.startup)
+               *(.text*)
+               *(.rodata*) *(.strings)
+               *(COMMON)
+       } > flash
+       _kram_start = . ;
+       _kram_end = . ;
+       _ram_image_start = . ;
+       .kernel : ALIGN_WITH_INPUT {
+               *(.kernel)
+               *(.data)
+               }> bkram AT> flash
+       _ram_image_end = . ;
+       .bss : ALIGN_WITH_INPUT {
+               *(.bss)
+               _bss_image_end = . ;
+               } > bkram
+       _top_of_heap = .;
 }
 
