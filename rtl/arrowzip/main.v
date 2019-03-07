@@ -1069,7 +1069,11 @@ module	main(i_clk, i_reset,
 
 `endif	// WBUBUS_MASTER
 
+`ifdef	VERILATOR
+	assign	buildtime_data = `BUILDTIME ^ 32'h8000_0000;
+`else
 	assign	buildtime_data = `BUILDTIME;
+`endif
 	assign	buildtime_ack = wb_stb && buildtime_sel;
 	assign	buildtime_stall = 1'b0;
 `ifdef	BUSPIC_ACCESS

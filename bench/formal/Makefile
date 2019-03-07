@@ -49,7 +49,6 @@ BMCARGS := --presat $(SOLVER)
 INDARGS := $(SOLVER) -i
 
 MEMS   := mems
-FLASH  := dualflexpress
 #
 WBSLAVE  := fwb_slave.v
 
@@ -68,15 +67,6 @@ $(MEMS).check: $(MEMS).smt2
 	$(SMTBMC) -g $(BMCARGS) -t 112 --dump-vcd $(MEMS).vcd $(MEMS).smt2
 	touch $@
 
-
-.PHONY: $(FLASH)
-$(FLASH) : $(FLASH).check
-$(FLASH).check: $(FLASH).smt2
-	rm -f $@
-	$(SMTBMC)    $(BMCARGS) -t 106 --dump-vcd $(FLASH).vcd $(FLASH).smt2
-	$(SMTBMC)    $(INDARGS) -t 104 --dump-vcd $(FLASH).vcd $(FLASH).smt2
-	$(SMTBMC) -c $(BMCARGS) -t 300 --dump-vcd $(FLASH)%.vcd $(FLASH).smt2
-	touch $@
 
 .PHONY: clean
 clean:

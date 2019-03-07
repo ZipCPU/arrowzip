@@ -1,4 +1,5 @@
 20*.tjz
+20*-build.v
 legal.txt
 .svn
 xilinx
