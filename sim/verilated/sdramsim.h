@@ -90,7 +90,7 @@ public:
 		m_next_wr = true;
 		m_fail = 0;
 
-		m_debug = true;
+		m_debug = false;
 	}
 
 	~SDRAMSIM(void) {
