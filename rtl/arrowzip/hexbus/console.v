@@ -4,14 +4,15 @@
 //
 // Project:	ZBasic, a generic toplevel impl using the full ZipCPU
 //
-// Purpose:	
+// Purpose:	This core implements a device to control the console channel
+//		of the debugging bus.
 //
 // Creator:	Dan Gisselquist, Ph.D.
 //		Gisselquist Technology, LLC
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Copyright (C) 2015-2017, Gisselquist Technology, LLC
+// Copyright (C) 2015-2019, Gisselquist Technology, LLC
 //
 // This program is free software (firmware): you can redistribute it and/or
 // modify it under the terms of  the GNU General Public License as published

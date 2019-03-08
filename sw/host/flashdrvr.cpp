@@ -159,6 +159,8 @@ void	FLASHDRVR::restore_dualio(void) {
 
 	m_fpga->writeio(R_FLASHCFG, F_END);
 
+	if (m_debug)
+		printf("Restoring flash status to Dual SPI I/O\n");
 	m_fpga->writeio(R_FLASHCFG, DUAL_IO_READ);
 	// 3 address bytes
 	m_fpga->writeio(R_FLASHCFG, CFG_USERMODE | CFG_DSPEED | CFG_WEDIR);
@@ -181,8 +183,8 @@ void	FLASHDRVR::restore_quadio(void) {
 #ifdef	QSPI_FLASH
 	static	const	uint32_t	QUAD_IO_READ     = CFG_USERMODE|0xeb;
 
-assert(0);
-
+	if (m_debug)
+		printf("Restoring flash status to QSPI I/O\n");
 	m_fpga->writeio(R_FLASHCFG, F_END);
 	if (MICRON_FLASHID == m_id) {
 		// printf("MICRON-flash\n");
@@ -228,6 +230,9 @@ void	FLASHDRVR::flwait(void) {
 		sr = m_fpga->readio(R_FLASHCFG);
 	} while(sr&WIP);
 	m_fpga->writeio(R_FLASHCFG, F_END);
+
+	if (m_debug)
+		printf("Flash status register = %d, write complete\n", sr);
 #endif
 }
 
@@ -262,7 +267,9 @@ bool	FLASHDRVR::erase_sector(const unsigned sector, const bool verify_erase) {
 	// Now, let's verify that we erased the sector properly
 	if (verify_erase) {
 		if (m_debug)
-			printf("Verifying the erase\n");
+			printf("Verifying the erase, from %08x to %08x\n",
+				R_FLASH+flashaddr,
+				R_FLASH+flashaddr+NPAGES*SZPAGEB-1);
 		for(int i=0; i<NPAGES; i++) {
 			// printf("READI[%08x + %04x]\n", R_FLASH+flashaddr+i*SZPAGEB, SZPAGEW);
 			m_fpga->readi(R_FLASH+flashaddr+i*SZPAGEB, SZPAGEW, page);
@@ -333,9 +340,26 @@ bool	FLASHDRVR::page_program(const unsigned addr, const unsigned len,
 	m_fpga->writeio(R_FLASHCFG, CFG_USERMODE|((flashaddr>> 8)&0x0ff));
 	m_fpga->writeio(R_FLASHCFG, CFG_USERMODE|((flashaddr    )&0x0ff));
 	// Write the page data itself
-	for(unsigned i=0; i<len; i++)
-		m_fpga->writeio(R_FLASHCFG, 
-			CFG_USERMODE | CFG_WEDIR | (data[i] & 0x0ff));
+	if (true) {
+		// Use vector writes
+		assert(len > 0);
+
+		// Since we'll be writing 8-bits at a time within 32-bit words,
+		// let's create a buffer to hold these to-be-sent commands
+		unsigned *buffer = new unsigned[len];
+		for(unsigned i=0; i<len; i++)
+			buffer[i] = CFG_USERMODE|CFG_WEDIR | (data[i] & 0x0ff);
+
+		// Now we can send it all at once, and skip most of the writing
+		// overhead
+		m_fpga->writez(R_FLASHCFG, len, buffer);
+		delete[] buffer;
+	} else {
+		// Do this the slow way
+		for(unsigned i=0; i<len; i++)
+			m_fpga->writeio(R_FLASHCFG, 
+				CFG_USERMODE | CFG_WEDIR | (data[i] & 0x0ff));
+	}
 	m_fpga->writeio(R_FLASHCFG, F_END);
 
 	printf("Writing page: 0x%08x - 0x%08x", addr, addr+len-1);
@@ -434,6 +458,8 @@ bool	FLASHDRVR::write(const unsigned addr, const unsigned len,
 
 			base = (addr>s)?addr:s;
 			ln=((addr+len>s+SECTORSZB)?(s+SECTORSZB):(addr+len))-base;
+			if (m_debug)
+				printf("Pre-checking: 0x%08x-0x%08x\n", base, base+ln-1);
 			m_fpga->readi(base, ln>>2, (uint32_t *)sbuf);
 			byteswapbuf(ln>>2, (uint32_t *)sbuf);
 

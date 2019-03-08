@@ -1,0 +1,152 @@
+[*]
+[*] GTKWave Analyzer v3.3.66 (w)1999-2015 BSI
+[*] Fri Mar  8 13:24:05 2019
+[*]
+[dumpfile] "/home/dan/work/rnd/opencores/arrowzip/trunk/sim/verilated/trace.vcd"
+[dumpfile_mtime] "Fri Mar  8 13:13:33 2019"
+[dumpfile_size] 1327282439
+[savefile] "/home/dan/work/rnd/opencores/arrowzip/trunk/sim/verilated/main.gtkw"
+[timestart] 263730000
+[size] 1913 703
+[pos] -1 -1
+*-23.000000 265618750 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+[treeopen] TOP.
+[treeopen] TOP.v.
+[treeopen] TOP.v.swic.
+[sst_width] 196
+[signals_width] 214
+[sst_expanded] 1
+[sst_vpaned_height] 191
+@28
+TOP.i_reset
+TOP.i_clk
+@200
+-
+@c00022
+TOP.v.r_pwrcount_data[31:0]
+@28
+(0)TOP.v.r_pwrcount_data[31:0]
+(1)TOP.v.r_pwrcount_data[31:0]
+(2)TOP.v.r_pwrcount_data[31:0]
+(3)TOP.v.r_pwrcount_data[31:0]
+(4)TOP.v.r_pwrcount_data[31:0]
+(5)TOP.v.r_pwrcount_data[31:0]
+(6)TOP.v.r_pwrcount_data[31:0]
+(7)TOP.v.r_pwrcount_data[31:0]
+(8)TOP.v.r_pwrcount_data[31:0]
+(9)TOP.v.r_pwrcount_data[31:0]
+(10)TOP.v.r_pwrcount_data[31:0]
+(11)TOP.v.r_pwrcount_data[31:0]
+(12)TOP.v.r_pwrcount_data[31:0]
+(13)TOP.v.r_pwrcount_data[31:0]
+(14)TOP.v.r_pwrcount_data[31:0]
+(15)TOP.v.r_pwrcount_data[31:0]
+(16)TOP.v.r_pwrcount_data[31:0]
+(17)TOP.v.r_pwrcount_data[31:0]
+(18)TOP.v.r_pwrcount_data[31:0]
+(19)TOP.v.r_pwrcount_data[31:0]
+(20)TOP.v.r_pwrcount_data[31:0]
+(21)TOP.v.r_pwrcount_data[31:0]
+(22)TOP.v.r_pwrcount_data[31:0]
+(23)TOP.v.r_pwrcount_data[31:0]
+(24)TOP.v.r_pwrcount_data[31:0]
+(25)TOP.v.r_pwrcount_data[31:0]
+(26)TOP.v.r_pwrcount_data[31:0]
+(27)TOP.v.r_pwrcount_data[31:0]
+(28)TOP.v.r_pwrcount_data[31:0]
+(29)TOP.v.r_pwrcount_data[31:0]
+(30)TOP.v.r_pwrcount_data[31:0]
+(31)TOP.v.r_pwrcount_data[31:0]
+@1401200
+-group_end
+@28
+TOP.o_dspi_cs_n
+TOP.o_dspi_sck
+TOP.o_dspi_dat[1:0]
+TOP.o_dspi_mod[1:0]
+@200
+-
+@28
+TOP.v.flash_sel
+TOP.v.bkram_sel
+TOP.v.sdram_sel
+TOP.v.console_sel
+@200
+-
+@28
+TOP.v.wb_cyc
+TOP.v.wb_stb
+TOP.v.wb_we
+@c00023
+TOP.v.wb_addr[22:0]
+@28
+(0)TOP.v.wb_addr[22:0]
+(1)TOP.v.wb_addr[22:0]
+(2)TOP.v.wb_addr[22:0]
+(3)TOP.v.wb_addr[22:0]
+(4)TOP.v.wb_addr[22:0]
+(5)TOP.v.wb_addr[22:0]
+(6)TOP.v.wb_addr[22:0]
+(7)TOP.v.wb_addr[22:0]
+(8)TOP.v.wb_addr[22:0]
+(9)TOP.v.wb_addr[22:0]
+(10)TOP.v.wb_addr[22:0]
+(11)TOP.v.wb_addr[22:0]
+(12)TOP.v.wb_addr[22:0]
+(13)TOP.v.wb_addr[22:0]
+(14)TOP.v.wb_addr[22:0]
+(15)TOP.v.wb_addr[22:0]
+(16)TOP.v.wb_addr[22:0]
+(17)TOP.v.wb_addr[22:0]
+(18)TOP.v.wb_addr[22:0]
+(19)TOP.v.wb_addr[22:0]
+(20)TOP.v.wb_addr[22:0]
+(21)TOP.v.wb_addr[22:0]
+(22)TOP.v.wb_addr[22:0]
+@1401201
+-group_end
+@22
+TOP.v.wb_data[31:0]
+TOP.v.wb_sel[3:0]
+@28
+TOP.v.wb_ack
+TOP.v.wb_stall
+@c00022
+TOP.v.swic.thecpu.ipc[24:0]
+@28
+(0)TOP.v.swic.thecpu.ipc[24:0]
+(1)TOP.v.swic.thecpu.ipc[24:0]
+(2)TOP.v.swic.thecpu.ipc[24:0]
+(3)TOP.v.swic.thecpu.ipc[24:0]
+(4)TOP.v.swic.thecpu.ipc[24:0]
+(5)TOP.v.swic.thecpu.ipc[24:0]
+(6)TOP.v.swic.thecpu.ipc[24:0]
+(7)TOP.v.swic.thecpu.ipc[24:0]
+(8)TOP.v.swic.thecpu.ipc[24:0]
+(9)TOP.v.swic.thecpu.ipc[24:0]
+(10)TOP.v.swic.thecpu.ipc[24:0]
+(11)TOP.v.swic.thecpu.ipc[24:0]
+(12)TOP.v.swic.thecpu.ipc[24:0]
+(13)TOP.v.swic.thecpu.ipc[24:0]
+(14)TOP.v.swic.thecpu.ipc[24:0]
+(15)TOP.v.swic.thecpu.ipc[24:0]
+(16)TOP.v.swic.thecpu.ipc[24:0]
+(17)TOP.v.swic.thecpu.ipc[24:0]
+(18)TOP.v.swic.thecpu.ipc[24:0]
+(19)TOP.v.swic.thecpu.ipc[24:0]
+(20)TOP.v.swic.thecpu.ipc[24:0]
+(21)TOP.v.swic.thecpu.ipc[24:0]
+(22)TOP.v.swic.thecpu.ipc[24:0]
+(23)TOP.v.swic.thecpu.ipc[24:0]
+(24)TOP.v.swic.thecpu.ipc[24:0]
+@1401200
+-group_end
+@200
+-
+@28
+TOP.v.swic.thecpu.pf_valid
+@22
+TOP.v.swic.thecpu.pf_instruction[31:0]
+TOP.v.swic.thecpu.pf_instruction_pc[24:0]
+[pattern_trace] 1
+[pattern_trace] 0

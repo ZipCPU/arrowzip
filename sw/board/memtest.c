@@ -348,6 +348,9 @@ void	entry(void) {
 #ifdef	_BOARD_HAS_SDRAMSCOPE
 	_sdramdbg->s_ctrl = WBSCOPE_TRIGGER|SCOPE_DELAY;
 #endif
+	asm("NSTR \"MEMTEST FAILURE!\"\n");
+	asm("NDUMP\n");
+	asm("NEXIT\n");
 	zip_halt();
 }
 

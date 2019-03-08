@@ -42,27 +42,27 @@
 @PREFIX=mem_sdram_bkram
 @MASTER.TYPE=CPU
 @MASTER.BUS=zip
-@LD.FILE=sdram.ld
+@LD.FILE=board.ld
 @LD.DEFNS=
 /* LD.DEFNS from zipmaster.txt */
 _kram  = ORIGIN(bkram); /* No high-speed kernel RAM */
 _ram   = ORIGIN(sdram);
-_rom   = 0;
+_rom   = ORIGIN(flash);
 _top_of_stack = ORIGIN(bkram) + LENGTH(bkram);
 
 @LD.SCRIPT=
 /* LD.SCRIPT from zipmaster.txt */
 SECTIONS
 {
-	.rocode ORIGIN(bkram): ALIGN(4) {
+	.rocode ORIGIN(flash): ALIGN(4) {
 		_boot_address = .;
 		*(.start) *(.boot)
-	} > bkram
+	} > flash
 	_kram_start = . ;
 	.kernel : ALIGN_WITH_INPUT {
 		*(.kernel)
 		_kram_end = . ;
-		}> bkram
+		}> bkram AT> flash
 	_ram_image_start = . ;
 	.ramcod : ALIGN_WITH_INPUT {
 		*(.text.startup)
@@ -70,7 +70,7 @@ SECTIONS
 		*(.rodata*) *(.strings)
 		*(.data) *(COMMON)
 		_ram_image_end = . ;
-		}> sdram
+		}> sdram AT> flash
 	.bss : ALIGN_WITH_INPUT {
 		*(.bss)
 		_bss_image_end = . ;

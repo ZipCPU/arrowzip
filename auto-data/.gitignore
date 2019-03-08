@@ -1,6 +1,9 @@
 autofpga.dbg
 board.h
 board.ld
+bkram.ld
+sdram.ld
+flash.ld
 build.xdc
 main.v
 main_tb.cpp
@@ -9,6 +12,4 @@ regdefs.cpp
 rtl.make.inc
 testb.h
 toplevel.v
-bkram.ld
-sdram.ld
 iscachable.v

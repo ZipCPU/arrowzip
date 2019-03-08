@@ -79,9 +79,10 @@ _outbyte(char v) {
 	}
 
 	// Depend upon the WBUART, not the PIC
-	while((_uart->u_fifo & 0x010000)==0)
+	while(TXWAIT)
 		;
 	uint8_t c = v;
+	UARTTX = c;
 #endif
 }
 
