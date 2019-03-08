@@ -151,7 +151,7 @@ module	rtclight(i_clk, i_reset,
 		always @(posedge i_clk)
 		if (i_reset)
 			sw_ctrl <= 0;
-		else if (i_wb_stb && i_wb_sel[0] && i_wb_addr == 3'b010)
+		else if (i_wb_stb && i_wb_we && i_wb_sel[0] && i_wb_addr == 3'b010)
 			sw_ctrl <= { i_wb_data[1:0], !i_wb_data[0] };
 		else
 			sw_ctrl <= 0;
