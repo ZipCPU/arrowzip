@@ -105,17 +105,16 @@ printf("No flash\n");
 	if (m_id != FLASH_UNKNOWN)
 		return m_id;
 
-// printf("Getting ID\n");
 	take_offline();
 
-	m_fpga->writeio(R_FLASHCFG, CFG_USERMODE | 0x9f);
-	m_fpga->writeio(R_FLASHCFG, CFG_USERMODE | 0x00);
+	m_fpga->writeio(R_FLASHCFG, F_MFRID);
+	m_fpga->writeio(R_FLASHCFG, F_EMPTY);
 	r = m_fpga->readio(R_FLASHCFG) & 0x0ff;
-	m_fpga->writeio(R_FLASHCFG, CFG_USERMODE | 0x00);
+	m_fpga->writeio(R_FLASHCFG, F_EMPTY);
 	r = (r<<8) | (m_fpga->readio(R_FLASHCFG) & 0x0ff);
-	m_fpga->writeio(R_FLASHCFG, CFG_USERMODE | 0x00);
+	m_fpga->writeio(R_FLASHCFG, F_EMPTY);
 	r = (r<<8) | (m_fpga->readio(R_FLASHCFG) & 0x0ff);
-	m_fpga->writeio(R_FLASHCFG, CFG_USERMODE | 0x00);
+	m_fpga->writeio(R_FLASHCFG, F_EMPTY);
 	r = (r<<8) | (m_fpga->readio(R_FLASHCFG) & 0x0ff);
 	m_id = r;
 	place_online();
@@ -425,6 +424,40 @@ void	FLASHDRVR::set_config(void) {
 	}
 }
 
+/*
+int	FLASHDRVR::checkmatch(const unsigned addr, const unsigned len,
+	const char *data) {
+
+	// Check for a match one page at a time
+	for(unsigned base = addr; (base<addr+len); base=PAGEOF(base+PGLENB)) {
+		unsigned	pln = PAGEOF(base+PGLENB)-base;
+		unsigned	sbuf[PGLENW];
+
+		m_fpga->readi(base, (pln+3)>>2, (uint32_t *)sbuf);
+		byteswapbuf(ln>>2, (uint32_t *)sbuf);
+
+			m_fpga->readi(base, ln>>2, (uint32_t *)sbuf);
+			byteswapbuf(ln>>2, (uint32_t *)sbuf);
+
+			dp = &data[base-addr];
+			SETSCOPE;
+			for(unsigned i=0; i<ln; i++) {
+				if ((sbuf[i]&dp[i]) != dp[i]) {
+					if (m_debug) {
+						printf("\nNEED-ERASE @0x%08x ... %08x != %08x (Goal)\n", 
+							i+base-addr, sbuf[i], dp[i]);
+					}
+					need_erase = true;
+					newv = (i&-4)+base;
+					break;
+				} else if ((sbuf[i] != dp[i])&&(newv == 0))
+					newv = (i&-4)+base;
+			}
+		}
+
+		if (newv == 0)
+*/
+
 bool	FLASHDRVR::write(const unsigned addr, const unsigned len,
 		const char *data, const bool verify) {
 #ifdef	FLASH_ACCESS
@@ -460,6 +493,10 @@ bool	FLASHDRVR::write(const unsigned addr, const unsigned len,
 			ln=((addr+len>s+SECTORSZB)?(s+SECTORSZB):(addr+len))-base;
 			if (m_debug)
 				printf("Pre-checking: 0x%08x-0x%08x\n", base, base+ln-1);
+
+			// newv = checkmatch(base, ln, &data[base-addr]);
+			// need_erase = (newv&1);
+			// newv = (newv&~4)+base
 			m_fpga->readi(base, ln>>2, (uint32_t *)sbuf);
 			byteswapbuf(ln>>2, (uint32_t *)sbuf);
 

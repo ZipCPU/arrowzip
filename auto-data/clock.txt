@@ -46,9 +46,8 @@
 	//
 	// Generate a 100MHz system clock from the incoming 12MHz clock
 	//
-	genpll	genclk(.inclk0(i_clk),
-			.c0(s_clk), 
-			.c1(mem_clk));
+	ygenpll	genclk(.i_clk(i_clk),
+			.o_ck0(s_clk), .o_ck1(mem_clk));
 	//
 	// This design uses local internal resets rather than a global reset
 	assign	s_reset = 1'b0;

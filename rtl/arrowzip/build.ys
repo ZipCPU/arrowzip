@@ -1,0 +1,63 @@
+read -incdir cpu
+read -incdir ../common
+read -sv builddate.v
+read -sv ygenpll.v
+read -sv yaddrio.v
+read -sv yaddro.v
+read -sv ../common/ledbouncer.v
+read -sv ../common/txuartlite.v
+read -sv cpu/busdelay.v
+read -sv cpu/cpudefs.v
+read -sv cpu/cpuops.v
+read -sv cpu/mpyop.v
+read -sv cpu/slowmpy.v
+read -sv cpu/dblfetch.v
+read -sv cpu/div.v
+read -sv cpu/icontrol.v
+read -sv cpu/idecode.v
+read -sv cpu/memops.v
+read -sv cpu/prefetch.v
+read -sv cpu/wbdblpriarb.v
+read -sv cpu/wbpriarbiter.v
+read -sv cpu/zipbones.v
+read -sv cpu/zipcpu.v
+read -sv cpu/ziptimer.v
+read -sv hexbus/console.v
+read -sv hexbus/hbbus.v
+read -sv hexbus/hbcheckerr.v
+read -sv hexbus/hbconsole.v
+read -sv hexbus/hbdechex.v
+read -sv hexbus/hbdeword.v
+read -sv hexbus/hbexec.v
+read -sv hexbus/hbgenhex.v
+read -sv hexbus/hbidle.v
+read -sv hexbus/hbints.v
+read -sv hexbus/hbnewline.v
+read -sv hexbus/hbpack.v
+read -sv debouncer.v
+read -sv dualflexpress.v
+read -sv main.v
+read -sv memdev.v
+read -sv mems.v
+read -sv rtclight.v
+read -sv rtcbare.v
+read -sv rtctimer.v
+read -sv rtcstopwatch.v
+read -sv rtcalarm.v
+read -sv rxuartlite.v
+read -sv spio.v
+read -sv toplevel.v
+read -sv ufifo.v
+read -sv wbscopc.v
+read -sv wbscope.v
+read -sv wbsdram.v
+# synth_intel -top main -family cycloneiv -vqm main.vqm
+# synth_intel -top memdev -family cycloneiv -vqm main.vqm
+# synth_intel -top memdev -family cyclonev -vqm main.vqm
+# synth_intel -top memdev -family max10 -vqm main.vqm
+synth_intel -top toplevel -family max10 -vqm toplevel.vqm
+#
+# Measure an ASIC gate count
+# synth -top main
+# abc -g cmos2
+# stat

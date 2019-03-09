@@ -69,24 +69,22 @@
 	//	0?	Normal serial mode, one bit in one bit out
 	//	10	Dual SPI mode, going out
 	//	11	Dual SPI mode coming from the device (read mode)
-	altoddr dspi_ddr_csn(
-		.outclock(s_clk),
-		.din({(2){ w_dspi_cs_n}}),
-		.pad_out(o_dspi_cs_n));
-	altoddr dspi_ddr_sck( .outclock(s_clk),
-		// .din({ !w_dspi_sck, 1'b1 }),
-		.din({(2){w_dspi_sck}}),
-		.pad_out(o_dspi_sck));
-	addrio	dspi_d0(.inclock(s_clk), .outclock(s_clk),
-			.dout({dspi_datp[0], dspi_datn[0]}),
-			.din({(2){o_dspi_dat[0]}}),
-			.pad_io(io_dspi_dat[0]),
-			.oe(!dspi_bmod[0]));
-	addrio	dspi_d1(.inclock(s_clk), .outclock(s_clk),
-			.dout({dspi_datp[1], dspi_datn[1]}),
-			.din({(2){o_dspi_dat[1]}}),
-			.pad_io(io_dspi_dat[1]),
-			.oe((dspi_bmod == 2'b10)?1'b1:1'b0));
+	yaddro dspi_ddr_csn( .i_clk(s_clk),
+		.i_data({(2){ w_dspi_cs_n}}), .o_pad(o_dspi_cs_n));
+	yaddro dspi_ddr_sck( .i_clk(s_clk),
+		.i_data({(2){w_dspi_sck}}), .o_pad(o_dspi_sck));
+
+
+	yaddrio	dspi_d0(.i_clk(s_clk),
+			.i_we(!dspi_bmod[0]),
+			.i_data({(2){o_dspi_dat[0]}}),
+			.o_data({dspi_datp[0], dspi_datn[0]}),
+			.io_pad(io_dspi_dat[0]));
+	yaddrio	dspi_d1(.i_clk(s_clk),
+			.i_we((dspi_bmod == 2'b10)?1'b1:1'b0),
+			.i_data({(2){o_dspi_dat[1]}}),
+			.o_data({dspi_datp[1], dspi_datn[1]}),
+			.io_pad(io_dspi_dat[1]));
 	assign	i_dspi_dat = dspi_datn;
 @MAIN.PORTLIST=
 		// The Universal DSPI Flash
@@ -186,7 +184,7 @@ _@$(PREFIX)=ORIGIN(@$(PREFIX));
 	// flash interface itself.  Hence, we always return zero here.
 	assign	@$(PREFIX)_ack   = 1'b0;
 	assign	@$(PREFIX)_stall = 1'b0;
-	assign	@$(PREFIX)_data  = 0;
+	assign	@$(PREFIX)_data  = flash_data;
 @REGS.NOTE= // FLASH erase/program configuration registers
 @REGS.N= 1
 @REGS.0= 0 R_@$(DEVID) @$(DEVID) QSPIC
