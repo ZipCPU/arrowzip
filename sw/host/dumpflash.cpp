@@ -92,7 +92,7 @@ int main(int argc, char **argv) {
 		m_fpga->readi(DUMPMEM, BUFLN>>2, (DEVBUS::BUSW *)&buf[0]);
 		byteswapbuf(BUFLN>>2, (DEVBUS::BUSW *)&buf[0]);
 	} else {
-		for(int i=(1<<23); i<BUFLN; i+=4) {
+		for(int i=0; i<BUFLN; i+=4) {
 			DEVBUS::BUSW	word;
 
 			word = m_fpga->readio(DUMPMEM+i);
