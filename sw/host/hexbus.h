@@ -88,7 +88,7 @@ public:
 	HEXBUS(LLCOMMSI *comms) : m_dev(comms) { init(); }
 	virtual	~HEXBUS(void) {
 		m_dev->close();
-		if (m_buf) 
+		if (m_buf)
 			delete[] m_buf;
 		m_buf = NULL;
 		delete	m_dev;

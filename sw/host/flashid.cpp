@@ -66,6 +66,7 @@ void	usage(void) {
 }
 
 int main(int argc, char **argv) {
+#ifdef	R_FLASHCFG
 	FLASHDRVR	*m_flash;
 	FPGAOPEN(m_fpga);
 
@@ -86,5 +87,8 @@ int main(int argc, char **argv) {
 
 	delete	m_flash;
 	delete	m_fpga;
+#else
+	printf("ERR: NO FLASH CONFIGURATION REGISTER DEFINED!\n");
+#endif
 }
 

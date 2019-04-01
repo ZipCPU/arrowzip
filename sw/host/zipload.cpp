@@ -67,10 +67,18 @@
 FPGA	*m_fpga;
 
 void	usage(void) {
+#ifdef	INCLUDE_ZIPCPU
 	printf("USAGE: zipload [-hr] <zip-program-file>\n");
 	printf("\n"
 "\t-h\tDisplay this usage statement\n"
 "\t-r\tStart the ZipCPU running from the address in the program file\n");
+#else
+	printf(
+"This program is designed to load the ZipCPU into a design.  It depends upon\n"
+"the ZipCPU having been built into the design, as well as the registers\n"
+"within the design having known locations.  When this program was built,\n"
+"however, there was no ZiPCPU within the design.\n");
+#endif
 }
 
 int main(int argc, char **argv) {

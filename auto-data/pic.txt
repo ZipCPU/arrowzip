@@ -51,8 +51,10 @@
 	//
 	// The BUS Interrupt controller
 	//
-	icontrol #(15)	@$(PREFIX)i(i_clk, 1'b0, (wb_stb)&&(@$(PREFIX)_sel),
-			wb_data, @$(PREFIX)_data, bus_int_vector, bus_interrupt);
+	icontrol #(15)	@$(PREFIX)i(i_clk, 1'b0,
+			(wb_stb)&&(@$(PREFIX)_sel), wb_we, wb_data,
+			@$(PREFIX)_ack, @$(PREFIX)_stall, @$(PREFIX)_data,
+			bus_int_vector, bus_interrupt);
 @MAIN.ALT=
 @REGS.N=1
 @REGS.0= 0 R_PIC PIC

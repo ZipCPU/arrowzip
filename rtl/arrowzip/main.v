@@ -394,24 +394,15 @@ module	main(i_clk, i_reset,
 	//
 	//
 	
-	assign	   buildtime_sel = ((wb_sio_sel)&&(wb_addr[ 2: 0] ==  3'h0));
- // 0x000000
-	assign	      buserr_sel = ((wb_sio_sel)&&(wb_addr[ 2: 0] ==  3'h1));
- // 0x000004
-	assign	      buspic_sel = ((wb_sio_sel)&&(wb_addr[ 2: 0] ==  3'h2));
- // 0x000008
-	assign	    pwrcount_sel = ((wb_sio_sel)&&(wb_addr[ 2: 0] ==  3'h3));
- // 0x00000c
-	assign	        spio_sel = ((wb_sio_sel)&&(wb_addr[ 2: 0] ==  3'h4));
- // 0x000010
-	assign	     version_sel = ((wb_sio_sel)&&(wb_addr[ 2: 0] ==  3'h5));
- // 0x000014
-	assign	    bustimer_sel = ((wb_dio_sel)&&((wb_addr[ 4: 3] &  2'h3) ==  2'h0));
- // 0x000000
-	assign	    watchdog_sel = ((wb_dio_sel)&&((wb_addr[ 4: 3] &  2'h3) ==  2'h1));
- // 0x000020
-	assign	         rtc_sel = ((wb_dio_sel)&&((wb_addr[ 4: 3] &  2'h3) ==  2'h2));
- // 0x000040 - 0x00005f
+	assign	   buildtime_sel = ((wb_sio_sel)&&(wb_addr[ 2: 0] ==  3'h0));  // 0x000000
+	assign	      buserr_sel = ((wb_sio_sel)&&(wb_addr[ 2: 0] ==  3'h1));  // 0x000004
+	assign	      buspic_sel = ((wb_sio_sel)&&(wb_addr[ 2: 0] ==  3'h2));  // 0x000008
+	assign	    pwrcount_sel = ((wb_sio_sel)&&(wb_addr[ 2: 0] ==  3'h3));  // 0x00000c
+	assign	        spio_sel = ((wb_sio_sel)&&(wb_addr[ 2: 0] ==  3'h4));  // 0x000010
+	assign	     version_sel = ((wb_sio_sel)&&(wb_addr[ 2: 0] ==  3'h5));  // 0x000014
+	assign	    bustimer_sel = ((wb_dio_sel)&&((wb_addr[ 4: 3] &  2'h3) ==  2'h0));  // 0x000000
+	assign	    watchdog_sel = ((wb_dio_sel)&&((wb_addr[ 4: 3] &  2'h3) ==  2'h1));  // 0x000020
+	assign	         rtc_sel = ((wb_dio_sel)&&((wb_addr[ 4: 3] &  2'h3) ==  2'h2));  // 0x000040 - 0x00005f
 	assign	    flashcfg_sel = ((wb_addr[22:19] &  4'hf) ==  4'h1); // 0x200000
 	assign	     console_sel = ((wb_addr[22:19] &  4'hf) ==  4'h2); // 0x400000 - 0x40000f
 	assign	      wb_sio_sel = ((wb_addr[22:19] &  4'hf) ==  4'h3); // 0x600000 - 0x60001f
@@ -508,33 +499,41 @@ module	main(i_clk, i_reset,
 	assign	wb_sio_ack = r_wb_sio_ack;
 
 	always	@(posedge i_clk)
-		casez( wb_addr[2:0] )
-			3'h0: r_wb_sio_data <= buildtime_data;
-			3'h1: r_wb_sio_data <= buserr_data;
-			3'h2: r_wb_sio_data <= buspic_data;
-			3'h3: r_wb_sio_data <= pwrcount_data;
-			3'h4: r_wb_sio_data <= spio_data;
-			default: r_wb_sio_data <= version_data;
-		endcase
+	casez( wb_addr[2:0] )
+		3'h0: r_wb_sio_data <= buildtime_data;
+		3'h1: r_wb_sio_data <= buserr_data;
+		3'h2: r_wb_sio_data <= buspic_data;
+		3'h3: r_wb_sio_data <= pwrcount_data;
+		3'h4: r_wb_sio_data <= spio_data;
+		default: r_wb_sio_data <= version_data;
+	endcase
 	assign	wb_sio_data = r_wb_sio_data;
 
 	reg	[1:0]	r_wb_dio_ack;
+	// # dlist = 3, nextlg(#dlist) = 2
 	reg	[1:0]	r_wb_dio_bus_select;
 	reg	[31:0]	r_wb_dio_data;
 	assign	wb_dio_stall = 1'b0;
 	always	@(posedge i_clk)
+	if (i_reset || !wb_cyc)
+		r_wb_dio_ack <= 0;
+	else
 		r_wb_dio_ack <= { r_wb_dio_ack[0], (wb_stb)&&(wb_dio_sel) };
 	assign	wb_dio_ack = r_wb_dio_ack[1];
+
 	always @(posedge i_clk)
-		r_wb_dio_bus_select <= wb_addr[4:3];
+	casez(wb_addr[4:3])
+		2'b00: r_wb_dio_bus_select <= 2'd0;
+		2'b01: r_wb_dio_bus_select <= 2'd1;
+		2'b10: r_wb_dio_bus_select <= 2'd2;
+		default: r_wb_dio_bus_select <= 0;
+	endcase
 
 	always	@(posedge i_clk)
 	casez(r_wb_dio_bus_select)
-		2'b00: r_wb_dio_data <= bustimer_data;
-		2'b01: r_wb_dio_data <= watchdog_data;
-		2'b10: r_wb_dio_data <= rtc_data;
-		default: r_wb_dio_data <= 0;
-
+		2'd0: r_wb_dio_data <= bustimer_data;
+		2'd1: r_wb_dio_data <= watchdog_data;
+		default: r_wb_dio_data <= rtc_data;
 	endcase
 
 	assign	wb_dio_data = r_wb_dio_data;
@@ -771,10 +770,7 @@ module	main(i_clk, i_reset,
 `else	// WATCHDOG_ACCESS
 
 	// In the case that there is no watchdog peripheral responding on the wb bus
-	reg	r_watchdog_ack;
-	initial	r_watchdog_ack = 1'b0;
-	always @(posedge i_clk)	r_watchdog_ack <= (wb_stb)&&(watchdog_sel);
-	assign	watchdog_ack   = r_watchdog_ack;
+	assign	watchdog_ack   = (wb_stb) && (watchdog_sel);
 	assign	watchdog_stall = 0;
 	assign	watchdog_data  = 0;
 
@@ -793,10 +789,7 @@ module	main(i_clk, i_reset,
 	assign	w_console_tx_data = 7'h7f;
 
 	// In the case that there is no console peripheral responding on the wb bus
-	reg	r_console_ack;
-	initial	r_console_ack = 1'b0;
-	always @(posedge i_clk)	r_console_ack <= (wb_stb)&&(console_sel);
-	assign	console_ack   = r_console_ack;
+	assign	console_ack   = (wb_stb) && (console_sel);
 	assign	console_stall = 0;
 	assign	console_data  = 0;
 
@@ -815,10 +808,7 @@ module	main(i_clk, i_reset,
 `else	// BKRAM_ACCESS
 
 	// In the case that there is no bkram peripheral responding on the wb bus
-	reg	r_bkram_ack;
-	initial	r_bkram_ack = 1'b0;
-	always @(posedge i_clk)	r_bkram_ack <= (wb_stb)&&(bkram_sel);
-	assign	bkram_ack   = r_bkram_ack;
+	assign	bkram_ack   = (wb_stb) && (bkram_sel);
 	assign	bkram_stall = 0;
 	assign	bkram_data  = 0;
 
@@ -835,10 +825,7 @@ module	main(i_clk, i_reset,
 	assign	rtc_ppd = 1'b0;
 
 	// In the case that there is no rtc peripheral responding on the wb bus
-	reg	r_rtc_ack;
-	initial	r_rtc_ack = 1'b0;
-	always @(posedge i_clk)	r_rtc_ack <= (wb_stb)&&(rtc_sel);
-	assign	rtc_ack   = r_rtc_ack;
+	assign	rtc_ack   = (wb_stb) && (rtc_sel);
 	assign	rtc_stall = 0;
 	assign	rtc_data  = 0;
 
@@ -854,10 +841,7 @@ module	main(i_clk, i_reset,
 	assign	o_led = 0;
 
 	// In the case that there is no spio peripheral responding on the wb bus
-	reg	r_spio_ack;
-	initial	r_spio_ack = 1'b0;
-	always @(posedge i_clk)	r_spio_ack <= (wb_stb)&&(spio_sel);
-	assign	spio_ack   = r_spio_ack;
+	assign	spio_ack   = (wb_stb) && (spio_sel);
 	assign	spio_stall = 0;
 	assign	spio_data  = 0;
 
@@ -875,10 +859,7 @@ module	main(i_clk, i_reset,
 `else	// PWRCOUNT_ACCESS
 
 	// In the case that there is no pwrcount peripheral responding on the wb bus
-	reg	r_pwrcount_ack;
-	initial	r_pwrcount_ack = 1'b0;
-	always @(posedge i_clk)	r_pwrcount_ack <= (wb_stb)&&(pwrcount_sel);
-	assign	pwrcount_ack   = r_pwrcount_ack;
+	assign	pwrcount_ack   = (wb_stb) && (pwrcount_sel);
 	assign	pwrcount_stall = 0;
 	assign	pwrcount_data  = 0;
 
@@ -940,10 +921,7 @@ module	main(i_clk, i_reset,
 	assign	sdram_debug = 32'h0000;
 
 	// In the case that there is no sdram peripheral responding on the wb bus
-	reg	r_sdram_ack;
-	initial	r_sdram_ack = 1'b0;
-	always @(posedge i_clk)	r_sdram_ack <= (wb_stb)&&(sdram_sel);
-	assign	sdram_ack   = r_sdram_ack;
+	assign	sdram_ack   = (wb_stb) && (sdram_sel);
 	assign	sdram_stall = 0;
 	assign	sdram_data  = 0;
 
@@ -976,10 +954,7 @@ module	main(i_clk, i_reset,
 	assign	o_dspi_dat  = 2'b11;
 
 	// In the case that there is no flash peripheral responding on the wb bus
-	reg	r_flash_ack;
-	initial	r_flash_ack = 1'b0;
-	always @(posedge i_clk)	r_flash_ack <= (wb_stb)&&(flash_sel);
-	assign	flash_ack   = r_flash_ack;
+	assign	flash_ack   = (wb_stb) && (flash_sel);
 	assign	flash_stall = 0;
 	assign	flash_data  = 0;
 
@@ -1042,15 +1017,14 @@ module	main(i_clk, i_reset,
 	//
 	// The BUS Interrupt controller
 	//
-	icontrol #(15)	buspici(i_clk, 1'b0, (wb_stb)&&(buspic_sel),
-			wb_data, buspic_data, bus_int_vector, bus_interrupt);
+	icontrol #(15)	buspici(i_clk, 1'b0,
+			(wb_stb)&&(buspic_sel), wb_we, wb_data,
+			buspic_ack, buspic_stall, buspic_data,
+			bus_int_vector, bus_interrupt);
 `else	// BUSPIC_ACCESS
 
 	// In the case that there is no buspic peripheral responding on the wb bus
-	reg	r_buspic_ack;
-	initial	r_buspic_ack = 1'b0;
-	always @(posedge i_clk)	r_buspic_ack <= (wb_stb)&&(buspic_sel);
-	assign	buspic_ack   = r_buspic_ack;
+	assign	buspic_ack   = (wb_stb) && (buspic_sel);
 	assign	buspic_stall = 0;
 	assign	buspic_data  = 0;
 
@@ -1134,10 +1108,7 @@ module	main(i_clk, i_reset,
 `else	// BUSTIMER_ACCESS
 
 	// In the case that there is no bustimer peripheral responding on the wb bus
-	reg	r_bustimer_ack;
-	initial	r_bustimer_ack = 1'b0;
-	always @(posedge i_clk)	r_bustimer_ack <= (wb_stb)&&(bustimer_sel);
-	assign	bustimer_ack   = r_bustimer_ack;
+	assign	bustimer_ack   = (wb_stb) && (bustimer_sel);
 	assign	bustimer_stall = 0;
 	assign	bustimer_data  = 0;
 
@@ -1153,10 +1124,7 @@ module	main(i_clk, i_reset,
 `else	// FLASHCFG_ACCESS
 
 	// In the case that there is no flashcfg peripheral responding on the wb bus
-	reg	r_flashcfg_ack;
-	initial	r_flashcfg_ack = 1'b0;
-	always @(posedge i_clk)	r_flashcfg_ack <= (wb_stb)&&(flashcfg_sel);
-	assign	flashcfg_ack   = r_flashcfg_ack;
+	assign	flashcfg_ack   = (wb_stb) && (flashcfg_sel);
 	assign	flashcfg_stall = 0;
 	assign	flashcfg_data  = 0;
 

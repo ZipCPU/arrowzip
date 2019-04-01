@@ -129,6 +129,9 @@ public:
 		// SIM.DEFNS tag to have those components defined here
 		// as part of the main_tb.cpp function.
 // Looking for string: SIM.DEFNS
+#ifdef	SPIO_ACCESS
+	int		m_last_led;
+#endif // SPIO_ACCESS
 	int	m_cpu_bombed;
 #ifdef	SDRAM_ACCESS
 	SDRAMSIM	*m_sdram;
@@ -145,6 +148,10 @@ public:
 		// create a SIM.INIT tag.  That tag's value will be pasted
 		// here.
 		//
+		// From spio
+#ifdef	SPIO_ACCESS
+		m_last_led = 0;
+#endif // SPIO_ACCESS
 		// From zip
 		m_cpu_bombed = 0;
 		// From sdram
@@ -206,6 +213,20 @@ public:
 		//
 		// SIM.TICK tags go here for SIM.CLOCK=clk
 		//
+		// SIM.TICK from spio
+#ifdef	SPIO_ACCESS
+		if (false && (m_core->o_led != m_last_led)) {
+			m_last_led = m_core->o_led;
+			printf("LED: ");
+			for(int i=0; i<8; i++) {
+				if (m_last_led & (1<<(8-1-i)))
+					printf("O");
+				else
+					printf(".");
+			}
+			printf("\n");
+		}
+#endif // SPIO_ACCESS
 		// SIM.TICK from zip
 #ifdef	INCLUDE_ZIPCPU
 		// ZipCPU Sim instruction support

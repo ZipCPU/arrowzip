@@ -98,8 +98,12 @@ static volatile RTCLIGHT *const _rtc = ((RTCLIGHT *)0x00800040);
 #endif	// RTC_ACCESS
 #ifdef	SPIO_ACCESS
 #define	_BOARD_HAS_SPIO
-static volatile unsigned *const _spio = ((unsigned *)6291472);
+static volatile unsigned *const _spio = ((unsigned *)0x00600010);
 #endif	// SPIO_ACCESS
+#ifdef	PWRCOUNT_ACCESS
+#define	_BOARD_HAS_PWRCOUNT
+static volatile unsigned *const _pwrcount = ((unsigned *)0x0060000c);
+#endif	// PWRCOUNT_ACCESS
 #ifdef	SDRAM_ACCESS
 #define	_BOARD_HAS_SDRAM
 extern char	_sdram[0x00800000];

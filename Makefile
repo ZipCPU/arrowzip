@@ -60,7 +60,7 @@ SUBMAKE:= $(MAKE) --no-print-directory -C
 SOCDIR := rtl/arrowzip
 SIMDIR := sim/verilated
 ZIPSW  := sw/board
-LIBXSVG:= ../../ftdi/libxsvf/xsvftool-ft232
+LIBXSVG:= ../../ftdi/libxsvf/xsvftool-ft232h
 
 #
 #

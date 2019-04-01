@@ -37,7 +37,8 @@
 ##
 @PREFIX=pwrcount
 @NADDR=1
-@ACCESS=PWRCOUNT_ACCESS
+@DEVID=PWRCOUNT
+@ACCESS=@$(DEVID)_ACCESS
 @SLAVE.TYPE=SINGLE
 @SLAVE.BUS=wb
 @MAIN.DEFNS=
@@ -51,4 +52,8 @@
 		r_pwrcount_data[31:0] <= r_pwrcount_data[31:0] + 1'b1;
 	assign	pwrcount_data = r_pwrcount_data;
 @REGS.N=1
-@REGS.0= 0 R_PWRCOUNT PWRCOUNT
+@REGS.0= 0 R_@$(DEVID) @$(DEVID)
+@BDEF.IONAME= _@$(PREFIX)
+@BDEF.IOTYPE= unsigned
+@BDEF.OSDEF= _BOARD_HAS_@$(DEVID)
+@BDEF.OSVAL= static volatile @$BDEF.IOTYPE *const @$BDEF.IONAME = ((@$BDEF.IOTYPE *)@$[0x%08x](REGBASE));

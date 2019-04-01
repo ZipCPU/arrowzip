@@ -37,7 +37,7 @@
 ##
 ##
 .PHONY: all
-PROGRAMS := hello cputest memtest
+PROGRAMS := hello cputest memtest intdemo # polldemo
 all:	$(PROGRAMS)
 #
 #
@@ -95,6 +95,9 @@ cputest: $(OBJDIR)/cputest.o bkram.ld
 	$(CC) $(CFLAGS) $(LBKRAM) $< -o $@
 
 memtest: $(OBJDIR)/memtest.o bkram.ld
+	$(CC) $(CFLAGS) $(LBKRAM) $< -o $@
+
+intdemo: $(OBJDIR)/intdemo.o bkram.ld
 	$(CC) $(CFLAGS) $(LBKRAM) $< -o $@
 
 

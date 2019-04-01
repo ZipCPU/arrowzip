@@ -173,5 +173,3 @@ void	NETCOMMS::close(void) {
 	}
 	::close(m_fdw);
 }
-
-
