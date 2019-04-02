@@ -37,7 +37,7 @@
 ##
 ##
 .PHONY: all
-PROGRAMS := hello cputest memtest intdemo # polldemo
+PROGRAMS := hello cputest memtest intdemo lvldemo
 all:	$(PROGRAMS)
 #
 #
@@ -51,7 +51,7 @@ OBJDUMP := zip-objdump
 SUBMAKE:= $(MAKE) --no-print-directory -C
 #
 #
-SOURCES := cputest.c hello.c
+SOURCES := cputest.c hello.c memslib.c lvldemo.c
 HEADERS :=
 DUMPRTL := -fdump-rtl-all
 DUMPTREE:= -fdump-tree-all
@@ -99,6 +99,9 @@ memtest: $(OBJDIR)/memtest.o bkram.ld
 
 intdemo: $(OBJDIR)/intdemo.o bkram.ld
 	$(CC) $(CFLAGS) $(LBKRAM) $< -o $@
+
+lvldemo: $(OBJDIR)/lvldemo.o $(OBJDIR)/memslib.o board.ld $(LIB)
+	$(CC) $(CFLAGS) $(LFLAGS) $(OBJDIR)/lvldemo.o $(OBJDIR)/memslib.o $(LIBS) -o $@
 
 
 $(OBJDIR)/hello.o: hello.c

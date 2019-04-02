@@ -182,7 +182,7 @@ static volatile unsigned *const _buspic = ((unsigned *)0x00800008);
 #endif	// BUSPIC_ACCESS
 #ifdef	MEMS_ACCESS
 #define	_BOARD_HAS_MEMS_SENSOR
-static volatile MEMS const *_mems = ((MEMS *)0x00a00c00);
+static volatile MEMS *const _mems = ((MEMS *)0x00a00c00);
 #endif	// MEMS_ACCESS
 #ifdef	BUSTIMER_ACCESS
 #define	_BOARD_HAS_BUSTIMER

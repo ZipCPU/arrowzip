@@ -157,7 +157,7 @@ typedef	struct	S_MEMS {
 @BDEF.IONAME=_@$(PREFIX)
 @BDEF.IOTYPE=MEMS
 @BDEF.OSDEF=_BOARD_HAS_MEMS_SENSOR
-@BDEF.OSVAL=static volatile @$(BDEF.IOTYPE) const *@$(BDEF.IONAME) = ((@$BDEF.IOTYPE *)@$[0x%08x](REGBASE));
+@BDEF.OSVAL=static volatile @$(BDEF.IOTYPE) *const @$(BDEF.IONAME) = ((@$BDEF.IOTYPE *)@$[0x%08x](REGBASE));
 @REGDEFS.H.INSERT=
 
 # @SIM.INCLUDE+=
