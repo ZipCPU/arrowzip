@@ -4,7 +4,47 @@
 //
 // Project:	ArrowZip, a demonstration of the Arrow MAX1000 FPGA board
 //
-// Purpose:	
+// Purpose:	This is the LIS3DH SPI controller.  Please reference the
+//		data sheet for the LIS3DH when examining this file.
+//
+//	The LIS3DH consists of a series of registers that can both be read
+//	and written.  This particular controller provides both read and write
+//	access to the LIS3DH registers.
+//
+//	One natural way to have done this would be to stall the WB bus while
+//	this controller was being accessed.  This stall would amount to
+//	up to 250 clock cycles--unacceptable.  So instead, reads or writes
+//	to the device take place via writes to this controller.
+//
+//	Writes to addresses ...
+//	 0- 31	Will read the  8-bit register 0-31
+//	32- 63	Will read the 16-bit register, starting at register 0-31
+//	64- 95	Will *WRITE* to the  8-bit register 0-31
+//	96-127	Will *WRITE* to 16-bit register, starting at 0-31
+//
+//	Certain registers, however, are *illegal* to write to.  These are the
+//	*reserved registers*.  The data sheet warns that attempts to write
+//	these registers will damage the device.  Hence, there's a protection
+//	circuit to prevent these illegal registers from being written to.
+//
+//	Reads from this controller will always return the last register read,
+//	regardless of the address.
+//
+//	- If the device is busy, the top bit (o_wb_data[31]) will be set, so
+//		you can know to read again later for the right value.
+//	- If the the last request was for an 8-bit value, the bottom 8-bits
+//		[7:0] will return this result
+//	- If the the last request was for an 16-bit value, the bottom 16-bits
+//		[15:0] will return this result
+//
+//		According to the LIS3DH data sheet, 16-bit values will start
+//		with the lower [7:0] bits and then return the [15:8] bits.
+//		To make certain that these values are coherent, OPT_SWAP_ENDIAN
+//		is set by default to swap the two octets before returning the
+//		answer.
+//
+//	Look for examples of how to work with this motion sensor in the
+//	sw/board directory.  (None exist there .... yet)
 //
 // Creator:	Dan Gisselquist, Ph.D.
 //		Gisselquist Technology, LLC
