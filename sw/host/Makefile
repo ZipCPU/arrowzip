@@ -38,7 +38,7 @@
 ##
 .PHONY: all
 PROGRAMS := wbregs netuart zipload zipstate zipdbg dumpflash flashid
-SCOPES := flashscope sdramscope
+SCOPES := flashscope sdramscope memsscope
 all: $(PROGRAMS) $(SCOPES)
 CXX := g++
 OBJDIR := obj-pc
@@ -94,6 +94,8 @@ zipload: $(OBJDIR)/zipload.o $(BUSOBJS) $(OBJDIR)/flashdrvr.o $(OBJDIR)/zipelf.o
 flashscope: $(OBJDIR)/flashscope.o $(BUSOBJS) $(OBJDIR)/scopecls.o
 	$(CXX) $(CFLAGS) $^ $(LIBS) -o $@
 sdramscope: $(OBJDIR)/sdramscope.o $(BUSOBJS) $(OBJDIR)/scopecls.o
+	$(CXX) $(CFLAGS) $^ $(LIBS) -o $@
+memsscope: $(OBJDIR)/memsscope.o $(BUSOBJS) $(OBJDIR)/scopecls.o
 	$(CXX) $(CFLAGS) $^ $(LIBS) -o $@
 
 

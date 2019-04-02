@@ -52,23 +52,14 @@ MEMS   := mems
 #
 WBSLAVE  := fwb_slave.v
 
-$(MEMS).smt2: $(RTL)/$(MEMS).v $(WBSLAVE)
-	yosys -ql $(MEMS).yslog -s $(MEMS).ys
-
-$(FLASH).smt2: $(RTL)/$(FLASH).v $(WBSLAVE)
-	yosys -ql $(FLASH).yslog -s $(FLASH).ys
-
-.PHONY: $(MEMS)
-$(MEMS) : $(MEMS).check
-$(MEMS).check: $(MEMS).smt2
-	rm -f $@
-	$(SMTBMC)    $(BMCARGS) -t 106 --dump-vcd $(MEMS).vcd $(MEMS).smt2
-	$(SMTBMC)    $(INDARGS) -t 104 --dump-vcd $(MEMS).vcd $(MEMS).smt2
-	$(SMTBMC) -g $(BMCARGS) -t 112 --dump-vcd $(MEMS).vcd $(MEMS).smt2
-	touch $@
-
+$(MEMS): $(MEMS)_prflil/PASS $(MEMS)_prfbig/PASS $(MEMS)_cvr/PASS
+$(MEMS)_prflil/PASS: $(MEMS).sby $(RTL)/$(MEMS).v $(WBSLAVE)
+	sby -f $(MEMS).sby prflil
+$(MEMS)_prfbig/PASS: $(MEMS).sby $(RTL)/$(MEMS).v $(WBSLAVE)
+	sby -f $(MEMS).sby prfbig
+$(MEMS)_cvr/PASS: $(MEMS).sby $(RTL)/$(MEMS).v $(WBSLAVE)
+	sby -f $(MEMS).sby cvr
 
 .PHONY: clean
 clean:
-	rm -f  $(MEMS).yslog   $(MEMS).smt2    $(MEMS)*.vcd   $(MEMS).check
-	rm -f *.check
+	rm -f  $(MEMS)_*/

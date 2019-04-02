@@ -1,0 +1,87 @@
+[*]
+[*] GTKWave Analyzer v3.3.86 (w)1999-2017 BSI
+[*] Mon Apr  1 21:47:57 2019
+[*]
+[dumpfile] "/home/dan/jericho/work/rnd/opencores/arrowzip/trunk/bench/formal/mems_cvr/engine_0/trace0.vcd"
+[dumpfile_mtime] "Mon Apr  1 21:46:58 2019"
+[dumpfile_size] 62652
+[savefile] "/home/dan/jericho/work/rnd/opencores/arrowzip/trunk/bench/formal/mems.gtkw"
+[timestart] 0
+[size] 1920 1021
+[pos] -1 -1
+*-6.000000 172 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+[sst_width] 270
+[signals_width] 310
+[sst_expanded] 1
+[sst_vpaned_height] 290
+@28
+mems.f_past_valid
+mems.i_reset
+mems.i_clk
+@200
+-
+@28
+[color] 2
+mems.i_wb_cyc
+[color] 2
+mems.i_wb_stb
+[color] 2
+mems.i_wb_we
+@22
+[color] 2
+mems.i_wb_addr[7:0]
+[color] 2
+mems.i_wb_data[31:0]
+@28
+[color] 3
+mems.o_wb_ack
+@22
+[color] 3
+mems.o_wb_data[31:0]
+@28
+mems.f_nreqs[1:0]
+mems.f_nacks[1:0]
+mems.f_outstanding[1:0]
+@200
+-
+@28
+[color] 3
+mems.o_mems_cs_n
+[color] 3
+mems.o_mems_mosi
+[color] 3
+mems.o_mems_sck
+@29
+[color] 2
+mems.i_mems_miso
+@200
+-
+@28
+mems.i_mems_int[1:0]
+mems.o_int[1:0]
+mems.o_done
+@200
+-
+@22
+mems.busy_reg[24:0]
+mems.data_reg[23:0]
+mems.f_sck_count[4:0]
+@28
+mems.done
+@22
+mems.done_pipe[24:0]
+mems.f_input_sreg[15:0]
+mems.f_next_expected_output[23:0]
+mems.f_output_sreg[23:0]
+mems.int_pipe[5:0]
+mems.read_data[15:0]
+@28
+mems.short
+mems.spi_busy
+mems.spi_request
+mems.spi_ztimer
+@22
+mems.unused[16:0]
+mems.wb_return[15:0]
+[pattern_trace] 1
+[pattern_trace] 0

@@ -1,0 +1,27 @@
+[tasks]
+cvr
+prflil prf
+prfbig prf
+
+[options]
+prf: mode prove
+prf: depth 20
+cvr: mode cover
+cvr: depth 160
+
+[engines]
+smtbmc boolector
+
+[script]
+read -formal -D MEMS mems.v
+read -formal -D MEMS fwb_slave.v
+prflil: chparam -set OPT_SWAP_ENDIAN 0 mems
+prfbig: chparam -set OPT_SWAP_ENDIAN 1 mems
+cvr: chparam -set SCKBITS 2         mems
+cvr: chparam -set SPI_CLK_DIVIDER 2 mems
+cvr: chparam -set F_OPT_COVER 1     mems
+prep -top mems
+
+[files]
+../../rtl/arrowzip/mems.v
+fwb_slave.v

@@ -1,13 +1,11 @@
 ################################################################################
 ##
-## Filename:	auto-data/Makefile
+## Filename: 	memsscope.txt
 ##
 ## Project:	ArrowZip, a demonstration of the Arrow MAX1000 FPGA board
 ##
-## Purpose:	To direct the build of the autofpga automatically generated
-##		files.  The various configuration files are the *.txt files
-##	found in this directory.
-##
+## Purpose:	Scope out the interaction on the MEMS accelerometer, to see
+##		if it is working or not, and if not why not
 ##
 ## Creator:	Dan Gisselquist, Ph.D.
 ##		Gisselquist Technology, LLC
@@ -38,35 +36,14 @@
 ################################################################################
 ##
 ##
-.PHONY: all
-all:	data
-#
-# Could also depend upon load, if desired, but not necessary
-#
-# This is the list of components that will form our project.  Each file consists
-# of parts and pieces of our project that autofpga will copy/paste into our
-# main project files.
-#
-BASE    := global.txt dlyarbiter.txt
-AUX     := version.txt buserr.txt pic.txt pwrcount.txt
-IO      := spio.txt memsdev.txt # gpio.txt
-RTC     := rtclight.txt # rtcdate.txt
-DBGBUS  := hbconsole.txt
-MEMORY  := bkram.txt flexpress.txt sdram.txt
-CPU     := zipbones.txt
-SCOPES  := # memsscope.txt # flashscope.txt # sdramscope.txt # cpuscope.txt
-LDSCRIPT:= mem_all.txt mem_flash_bkram.txt mem_bkram_only.txt mem_sdram_bkram.txt
-DATA := clock.txt $(BASE) $(AUX) $(IO) $(RTC)			\
-	$(DBGBUS) $(MEMORY) $(CPU) $(SCOPES) $(LDSCRIPT)
-
-AUTOFPGA := autofpga
-$(AUTOFPGA):
-
-.PHONY: data
-data: $(AUTOFPGA) $(DATA)
-	$(AUTOFPGA) -d -o . $(DATA)
-
-clean:
-	rm -f toplevel.v main.v regdefs.h regdefs.cpp board.h board.ld
-	rm -f rtl.make.inc main_tb.cpp
-	rm -f dump.txt
+@PREFIX=memsdbg
+@NADDR=2
+@DEVID=MEMSSCOPE
+@DEPENDS=FLASH_ACCESS
+@TARGET=mems
+@TRIGGER=mems_debug[31]
+@MAIN.DEFNS=
+@LOG_CAPTURE_SIZE=9
+@INT.FLASHDBG.WIRE=@$(PREFIX)_int
+@INT.FLASHDBG.PIC=buspic
+@INCLUDEFILE=wbscopc.txt

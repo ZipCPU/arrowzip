@@ -1,0 +1,56 @@
+[*]
+[*] GTKWave Analyzer v3.3.66 (w)1999-2015 BSI
+[*] Tue Apr  2 18:48:04 2019
+[*]
+[dumpfile] "/home/dan/work/rnd/opencores/arrowzip/trunk/sw/host/mems.vcd"
+[dumpfile_mtime] "Tue Apr  2 18:34:51 2019"
+[dumpfile_size] 57952
+[savefile] "/home/dan/work/rnd/opencores/arrowzip/trunk/sw/host/memsscope.gtkw"
+[timestart] 52044092593
+[size] 1920 1054
+[pos] 1001 -1
+*-9.000000 52044092831 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+[sst_width] 196
+[signals_width] 150
+[sst_expanded] 1
+[sst_vpaned_height] 315
+@22
+WBSCOPE._raw_data[30:0]
+@28
+WBSCOPE._trigger
+@200
+-
+@28
+WBSCOPE.stb_n_we[0]
+WBSCOPE.spi_request[0]
+@200
+-
+-
+@28
+[color] 3
+WBSCOPE.o_cs_n[0]
+[color] 3
+WBSCOPE.o_sck[0]
+[color] 3
+WBSCOPE.o_mosi[0]
+[color] 2
+WBSCOPE.i_miso[0]
+@200
+-
+@28
+[color] 3
+WBSCOPE.o_done[0]
+@29
+[color] 2
+WBSCOPE.o_int[1:0]
+@200
+-
+@28
+WBSCOPE.spi_busy[0]
+@22
+WBSCOPE.wb_addr[7:0]
+WBSCOPE.wb_return[11:0]
+@28
+WBSCOPE.ztimer[0]
+[pattern_trace] 1
+[pattern_trace] 0

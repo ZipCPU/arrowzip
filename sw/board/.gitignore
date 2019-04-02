@@ -4,3 +4,10 @@ memtest
 cputest.txt
 hello.txt
 memtest.txt
+writelet
+eraselet
+writelet.bin
+eraselet.bin
+writelet.txt
+eraselet.txt
+intdemo
