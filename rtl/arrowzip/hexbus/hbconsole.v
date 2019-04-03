@@ -77,13 +77,37 @@ module	hbconsole(i_clk, i_rx_stb, i_rx_byte,
 	//
 
 
+	wire		w_reset;
+	wire		dec_stb;
+	wire	[4:0]	dec_bits;
+	wire		iw_stb;
+	wire	[33:0]	iw_word;
+	// verilator lint_off UNUSED
+	wire		wb_busy;
+	// verilator lint_on UNUSED
+	wire		ow_stb;
+	wire	[33:0]	ow_word;
+	// verilator lint_off UNUSED
+	wire		int_busy;
+	// verilator lint_on UNUSED
+	wire		idl_busy, int_stb;
+	wire	[33:0]	int_word;
+	wire		hb_busy, idl_stb;
+	wire	[33:0]	idl_word;
+	wire		hb_stb, hx_busy;
+	wire	[4:0]	hb_bits;
+	wire		hx_stb, nl_busy;
+	wire	[6:0]	hx_byte;
+	wire		fnl_stb;
+	wire	[6:0]	fnl_byte;
+	reg		ps_full;
+	reg	[7:0]	ps_data;
+
 	always @(posedge i_clk)
 		o_console_stb <= (i_console_stb)&&(i_rx_byte[7] == 1'b0);
 	always @(posedge i_clk)
 		o_console_data <= i_rx_byte[6:0];
 
-
-	wire	w_reset;
 
 	//
 	//
@@ -91,16 +115,12 @@ module	hbconsole(i_clk, i_rx_stb, i_rx_byte,
 	//
 	//
 	// First step, convert the incoming bytes into bits
-	wire		dec_stb;
-	wire	[4:0]	dec_bits;
 	hbdechex dechxi(i_clk,
 		i_rx_stb, i_rx_byte,
 		dec_stb, w_reset, dec_bits);
 
 
 	// ... that can then be transformed into bus command words
-	wire		iw_stb;
-	wire	[33:0]	iw_word;
 	hbpack	packxi(i_clk, w_reset,
 		dec_stb, dec_bits, iw_stb, iw_word);
 
@@ -108,11 +128,6 @@ module	hbconsole(i_clk, i_rx_stb, i_rx_byte,
 	//
 	// We'll use these bus command words to drive a wishbone bus
 	//
-	// verilator lint_off UNUSED
-	wire		wb_busy;
-	// verilator lint_on UNUSED
-	wire		ow_stb;
-	wire	[33:0]	ow_word;
 	hbexec	wbexec(i_clk, w_reset, iw_stb, iw_word, wb_busy,
 			ow_stb, ow_word,
 			o_wb_cyc, o_wb_stb, o_wb_we, o_wb_addr, o_wb_data,
@@ -122,11 +137,6 @@ module	hbconsole(i_clk, i_rx_stb, i_rx_byte,
 	// We'll then take the responses from the bus, and add an interrupt
 	// flag to the output any time things are idle.  This also acts
 	// as a one-stage FIFO
-	// verilator lint_off UNUSED
-	wire		int_busy;
-	// verilator lint_on UNUSED
-	wire		idl_busy, int_stb;
-	wire	[33:0]	int_word;
 	hbints	addints(i_clk, w_reset, i_interrupt,
 			ow_stb,  ow_word,  int_busy,
 			int_stb, int_word, idl_busy);
@@ -134,36 +144,26 @@ module	hbconsole(i_clk, i_rx_stb, i_rx_byte,
 	// 
 	// 
 	// 
-	wire		hb_busy, idl_stb;
-	wire	[33:0]	idl_word;
 	hbidle	addidles(i_clk, w_reset,
 			int_stb, int_word, idl_busy,
 			idl_stb, idl_word, hb_busy);
 
 	// We'll then take that ouput from that stage, and disassemble the
 	// response word into smaller (5-bit) sized units ...
-	wire		hb_stb, hx_busy;
-	wire	[4:0]	hb_bits;
 	hbdeword unpackx(i_clk, w_reset,
 			idl_stb, idl_word, hb_busy,
 			hb_stb, hb_bits, hx_busy);
 
-	wire		hx_stb, nl_busy;
-	wire	[6:0]	hx_byte;
 	// ... that can then be transmitted back down the channel
 	hbgenhex genhex(i_clk, w_reset, hb_stb, hb_bits, hx_busy,
 			hx_stb, hx_byte, nl_busy);
 
-	wire		fnl_stb;
-	wire	[6:0]	fnl_byte;
 	//
 	// We'll also add carriage return newline pairs any time the channel
 	// goes idle
 	hbnewline addnl(i_clk, w_reset, hx_stb, hx_byte, nl_busy,
 			fnl_stb, fnl_byte, (i_tx_busy)&&(ps_full));
 
-	reg		ps_full;
-	reg	[7:0]	ps_data;
 	//
 	//
 	// Let's now arbitrate between the two outputs

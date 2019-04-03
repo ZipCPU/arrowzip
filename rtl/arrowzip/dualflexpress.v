@@ -198,7 +198,13 @@ module	dualflexpress(i_clk, i_reset,
 	assign	cfg_ls_write = (cfg_write)&&(!i_wb_data[DSPEED_BIT]);
 
 
-	reg	ckstb, ckpos, ckneg, ckpre;
+	reg		ckstb, ckpos, ckneg, ckpre;
+	reg		maintenance;
+	reg	[1:0]	m_mod;
+	reg		m_cs_n;
+	reg		m_clk;
+	reg	[1:0]	m_dat;
+
 
 	generate if (OPT_ODDR)
 	begin
@@ -283,12 +289,6 @@ module	dualflexpress(i_clk, i_reset,
 	// Maintenance / startup portion
 	//
 	//
-	reg		maintenance;
-	reg	[1:0]	m_mod;
-	reg		m_cs_n;
-	reg		m_clk;
-	reg	[1:0]	m_dat;
-
 	generate if (OPT_STARTUP)
 	begin : GEN_STARTUP
 		localparam	M_WAITBIT=10;
@@ -1139,6 +1139,15 @@ module	dualflexpress(i_clk, i_reset,
 	wire	[(F_LGDEPTH-1):0]	f_nreqs, f_nacks,
 					f_outstanding;
 	reg	[(AW-1):0]	f_req_addr;
+	reg	[21:0]	fv_addr;
+	reg	[31:0]	fv_data;
+	reg	[F_MEMACK:0] f_memread;
+	reg	[32:0]	f_past_data;
+	reg	[F_PIPEACK:0]	f_piperead;
+	reg	[F_CFGHSACK:0]	f_cfghsread;
+	reg	[F_CFGHSACK:0]	f_cfghswrite;
+	reg	[F_CFGLSACK:0]	f_cfglswrite;
+
 //
 //
 // Generic setup
@@ -1398,7 +1407,6 @@ module	dualflexpress(i_clk, i_reset,
 	//
 	//
 	//
-	reg	[21:0]	fv_addr;
 	always @(posedge i_clk)
 	if (bus_request)
 	begin
@@ -1408,13 +1416,11 @@ module	dualflexpress(i_clk, i_reset,
 		fv_addr[AW-1:0] <= i_wb_addr;
 	end
 
-	reg	[31:0]	fv_data;
 	always @(posedge i_clk)
 	if ((i_wb_stb || i_cfg_stb) && !o_wb_stall && i_wb_we)
 		fv_data <= i_wb_data;
 
 	// Memory reads
-	reg	[F_MEMACK:0] f_memread;
 
 	initial	f_memread = 0;
 	generate if (RDDELAY == 0)
@@ -1460,7 +1466,6 @@ module	dualflexpress(i_clk, i_reset,
 	else if (|f_memread)
 		assert(o_dspi_mod == DUAL_READ);
 
-	reg	[32:0]	f_past_data;
 	always @(posedge i_clk)
 	if ($past(ckpos,RDDELAY))
 	begin
@@ -1557,7 +1562,6 @@ module	dualflexpress(i_clk, i_reset,
 			assert((f_memread ^ (1<<k)) == 0);
 	end endgenerate
 
-	reg	[F_PIPEACK:0]	f_piperead;
 
 	generate if (RDDELAY == 0)
 	begin
@@ -1643,8 +1647,6 @@ module	dualflexpress(i_clk, i_reset,
 	//
 	// Lowspeed config write
 	//
-	reg	[F_CFGLSACK:0]	f_cfglswrite;
-
 	initial	f_cfglswrite = 0;
 	always @(posedge i_clk)
 	if (i_reset)
@@ -1747,8 +1749,6 @@ module	dualflexpress(i_clk, i_reset,
 	//
 	// High speed config write
 	//
-	reg	[F_CFGHSACK:0]	f_cfghswrite;
-
 	generate if (RDDELAY == 0)
 	begin
 		initial	f_cfghswrite = 0;
@@ -1865,8 +1865,6 @@ module	dualflexpress(i_clk, i_reset,
 	//
 	// High speed config read
 	//
-	reg	[F_CFGHSACK:0]	f_cfghsread;
-
 	initial	f_cfghsread = 0;
 	always @(posedge i_clk)
 	if (i_reset)
