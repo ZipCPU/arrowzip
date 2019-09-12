@@ -48,12 +48,10 @@
 @INT.RTC.PIC=buspic
 @MAIN.DEFNS=
 	// Definitions in support of the GPS driven RTC
-	wire	rtc_ppd;
-	reg	r_rtc_ack;
+	wire	@$(PREFIX)_ppd;
 @MAIN.INSERT=
 	rtclight #(@$[32'h%x](CLKSTEP)) the@$(PREFIX)(i_clk, i_reset,
-		wb_cyc, (wb_stb)&&(@$(PREFIX)_sel), wb_we,
-			wb_addr[2:0],
+		wb_cyc, (wb_stb)&&(@$(PREFIX)_sel), wb_we, wb_addr[2:0],
 			wb_data, wb_sel,
 		@$(PREFIX)_stall, @$(PREFIX)_ack, @$(PREFIX)_data,
 		@$(PREFIX)_int, @$(PREFIX)_ppd);

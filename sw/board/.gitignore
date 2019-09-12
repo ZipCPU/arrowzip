@@ -4,12 +4,12 @@ memtest
 cputest.txt
 hello.txt
 memtest.txt
-writelet
 eraselet
-writelet.bin
-eraselet.bin
-writelet.txt
+writelet
 eraselet.txt
+writelet.txt
+eraselet.bin
+writelet.bin
 intdemo
 intdemo.txt
 lvldemo

@@ -5,7 +5,7 @@
 // Project:	ArrowZip, a demonstration of the Arrow MAX1000 FPGA board
 //
 // Purpose:	To start a program from flash, loading its various components
-//		into on-chip block RAM, or off-chip DDR3 SDRAM, as indicated
+//		into on-chip block RAM, or off-chip SDRAM, as indicated
 //	by the symbols/pointers within the program itself.  As you will notice
 //	by the names of the symbols, it is assumed that a kernel will be placed
 //	into block RAM.

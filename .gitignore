@@ -9,6 +9,7 @@ obj-zip
 *.o
 *.a
 *.vcd
+*.fst
 .swp
 .*.swp
 .*.swo
