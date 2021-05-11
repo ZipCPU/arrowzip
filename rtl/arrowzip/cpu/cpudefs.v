@@ -1,7 +1,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 //
 // Filename:	cpudefs.v
-//
+// {{{
 // Project:	Zip CPU -- a small, lightweight, RISC CPU soft core
 //
 // Purpose:	Some architectures have some needs, others have other needs.
@@ -27,9 +27,9 @@
 //		Gisselquist Technology, LLC
 //
 ////////////////////////////////////////////////////////////////////////////////
-//
-// Copyright (C) 2015-2019, Gisselquist Technology, LLC
-//
+// }}}
+// Copyright (C) 2015-2021, Gisselquist Technology, LLC
+// {{{
 // This program is free software (firmware): you can redistribute it and/or
 // modify it under the terms of  the GNU General Public License as published
 // by the Free Software Foundation, either version 3 of the License, or (at
@@ -44,14 +44,15 @@
 // with this program.  (It's in the $(ROOT)/doc directory.  Run make with no
 // target there if the PDF file isn't present.)  If not, see
 // <http://www.gnu.org/licenses/> for a copy.
-//
+// }}}
 // License:	GPL, v3, as defined and found on www.gnu.org,
+// {{{
 //		http://www.gnu.org/licenses/gpl.html
 //
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-//
+// }}}
 `ifndef	CPUDEFS_H
 `define	CPUDEFS_H
 //
@@ -60,7 +61,7 @@
 // it handles various instructions within the set:
 //
 //
-//
+// {{{
 // OPT_MULTIPLY controls whether or not the multiply is built and included
 // in the ALU by default.  Set this option and a parameter will be set that
 // includes the multiply.  (This parameter may still be overridden, as with
@@ -74,10 +75,10 @@
 // A value of 2 will cause the multiply to have a single delay cycle, 3 will
 // have two delay cycles, and 4 (or more) will have 3 delay cycles.
 //
-//
+// }}}
 `define	OPT_MULTIPLY	3
 //
-//
+// {{{
 //
 // OPT_DIVIDE controls whether or not the divide instruction is built and
 // included into the ZipCPU by default.  Set this option and a parameter will
@@ -87,10 +88,10 @@
 // an illegal instruction exception that will send the CPU into supervisor
 // mode.
 //
-//
+// }}}
 `define	OPT_DIVIDE
 //
-//
+// {{{
 //
 // OPT_IMPLEMENT_FPU will (one day) control whether or not the floating point
 // unit (once I have one) is built and included into the ZipCPU by default.
@@ -101,10 +102,10 @@
 // multiply and divide any floating point instruction will result in an illegal
 // instruction exception that will send the CPU into supervisor mode.
 //
-//
+// }}}
 // `define	OPT_IMPLEMENT_FPU
 //
-//
+// {{{
 //
 //
 // OPT_SINGLE_FETCH controls whether or not the prefetch has a cache, and
@@ -131,10 +132,10 @@
 //
 // I recommend only defining this if you "need" to, if area is tight and
 // speed isn't as important.  Otherwise, just leave this undefined.
-//
+// }}}
 // `define	OPT_SINGLE_FETCH
 //
-//
+// {{{
 // OPT_DOUBLE_FETCH is an alternative to OPT_SINGLE_FETCH.  It is designed to
 // increase performance primarily when using an instruction memory which has
 // one cost for a random access, and a second (lower) cost for sequential
@@ -152,12 +153,12 @@
 // not define both OPT_DOUBLE_FETCH and OPT_SINGLE_FETCH (the ifndef below
 // should prevent that).
 //
-//
+// }}}
 `ifndef	OPT_SINGLE_FETCH
 `define	OPT_DOUBLE_FETCH
 `endif
 //
-//
+// {{{
 //
 // The ZipCPU ISA defines an optional compressed instruction set (CIS)
 // complement.  This compressed instruction format allows two instructions to
@@ -166,10 +167,10 @@
 // complete--they are just compressed within memory to spare troubles with the
 // prefetch.  Set OPT_CIS to include these compressed instructions as part of
 // the instruction set.
-//
+// }}}
 `define OPT_CIS		// COST: about 87 LUTs
 //
-//
+// {{{
 //
 //
 // OPT_EARLY_BRANCHING is an attempt to execute a BRA statement as early
@@ -182,21 +183,21 @@
 //
 // I recommend setting this flag, so as to turn early branching on---if you
 // have the LUTs available to afford it.
-//
+// }}}
 `define	OPT_EARLY_BRANCHING
 //
 //
-//
+// {{{
 //
 // The next several options are pipeline optimization options.  They make no
 // sense in a single instruction fetch mode, hence we #ifndef them so they
 // are only defined if we are in a full pipelined mode (i.e. OPT_SINGLE_FETCH
 // is not defined).
-//
+// }}}
 `ifndef	OPT_SINGLE_FETCH
 `ifndef	OPT_DOUBLE_FETCH
 //
-//
+// {{{
 //
 // OPT_PIPELINED is the natural result and opposite of using the single
 // instruction fetch unit.  If you are not using that unit, the ZipCPU will
@@ -205,10 +206,10 @@
 // well ... that and it does a better job of explaining what is going on.
 //
 // In other words, leave this define alone--lest you break the ZipCPU.
-//
+// }}}
 `define	OPT_PIPELINED
 //
-//
+// {{{
 //
 // OPT_TRADITIONAL_PFCACHE allows you to switch between one of two prefetch
 // caches.  If enabled, a more traditional cache is implemented.  This more
@@ -218,20 +219,20 @@
 // implements a windowed approach to caching.)
 //
 // If you have the fabric to support this option, I recommend including it.
-//
+// }}}
 `define	OPT_TRADITIONAL_PFCACHE
 //
 //
-//
+// {{{
 //
 // OPT_DCACHE enables a CPU data cache for (hopefully) better performance
 // in terms of speed.  It requires telling the CPU which parts of memory
 // can be cachable in terms of three separate address regions: one for the
 // SDRAM, one for the flash, and another for the block RAM.
-//
+// }}}
 `define	OPT_DCACHE
 //
-//
+// {{{
 //
 // OPT_PIPELINED_BUS_ACCESS controls whether or not LOD/STO instructions
 // can take advantaged of pipelined bus instructions.  To be eligible, the
@@ -244,7 +245,7 @@
 //
 // I recommend setting this flag, for performance reasons, especially if your
 // wishbone bus can handle pipelined bus accesses.
-//
+// }}}
 // `define	OPT_PIPELINED_BUS_ACCESS
 //
 //

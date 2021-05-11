@@ -1,7 +1,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 //
 // Filename: 	ledbouncer.v
-//
+// {{{
 // Project:	ArrowZip, a demonstration of the Arrow MAX1000 FPGA board
 //
 // Purpose:	
@@ -10,9 +10,9 @@
 //		Gisselquist Technology, LLC
 //
 ////////////////////////////////////////////////////////////////////////////////
-//
-// Copyright (C) 2017-2019, Gisselquist Technology, LLC
-//
+// }}}
+// Copyright (C) 2017-2021, Gisselquist Technology, LLC
+// {{{
 // This program is free software (firmware): you can redistribute it and/or
 // modify it under the terms of  the GNU General Public License as published
 // by the Free Software Foundation, either version 3 of the License, or (at
@@ -34,7 +34,8 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-//
+`default_nettype none
+// }}}
 module	ledbouncer(i_clk, o_leds);
 	parameter	NLEDS=8, CTRBITS=25;
 	input	wire		i_clk;

@@ -1,7 +1,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 //
 // Filename: 	wbdmac.v
-//
+// {{{
 // Project:	Zip CPU -- a small, lightweight, RISC CPU soft core
 //
 // Purpose:	Wishbone DMA controller
@@ -85,9 +85,9 @@
 //		Gisselquist Technology, LLC
 //
 ////////////////////////////////////////////////////////////////////////////////
-//
-// Copyright (C) 2015-2019, Gisselquist Technology, LLC
-//
+// }}}
+// Copyright (C) 2015-2021, Gisselquist Technology, LLC
+// {{{
 // This program is free software (firmware): you can redistribute it and/or
 // modify it under the terms of  the GNU General Public License as published
 // by the Free Software Foundation, either version 3 of the License, or (at
@@ -102,13 +102,14 @@
 // with this program.  (It's in the $(ROOT)/doc directory.  Run make with no
 // target there if the PDF file isn't present.)  If not, see
 // <http://www.gnu.org/licenses/> for a copy.
-//
+// }}}
 // License:	GPL, v3, as defined and found on www.gnu.org,
+// {{{
 //		http://www.gnu.org/licenses/gpl.html
-//
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
+`default_nettype none
 //
 `define	DMA_IDLE	3'b000
 `define	DMA_WAIT	3'b001
@@ -117,7 +118,7 @@
 `define	DMA_PRE_WRITE	3'b100
 `define	DMA_WRITE_REQ	3'b101
 `define	DMA_WRITE_ACK	3'b110
-
+// }}}
 module wbdmac(i_clk, i_reset,
 		i_swb_cyc, i_swb_stb, i_swb_we, i_swb_addr, i_swb_data,
 			o_swb_ack, o_swb_stall, o_swb_data,

@@ -1,7 +1,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 //
 // Filename:	memdev.v
-//
+// {{{
 // Project:	ArrowZip, a demonstration of the Arrow MAX1000 FPGA board
 //
 // Purpose:	This file is really simple: it creates an on-chip memory,
@@ -17,9 +17,9 @@
 //		Gisselquist Technology, LLC
 //
 ////////////////////////////////////////////////////////////////////////////////
-//
-// Copyright (C) 2015-2019, Gisselquist Technology, LLC
-//
+// }}}
+// Copyright (C) 2015-2021, Gisselquist Technology, LLC
+// {{{
 // This program is free software (firmware): you can redistribute it and/or
 // modify it under the terms of  the GNU General Public License as published
 // by the Free Software Foundation, either version 3 of the License, or (at
@@ -41,52 +41,67 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-//
 `default_nettype	none
-//
-module	memdev(i_clk, i_reset,
-		i_wb_cyc, i_wb_stb, i_wb_we, i_wb_addr, i_wb_data, i_wb_sel,
-		o_wb_ack, o_wb_stall, o_wb_data);
-	parameter	LGMEMSZ=15, DW=32, EXTRACLOCK= 1;
-	parameter	HEXFILE="";
-	parameter [0:0]	OPT_ROM = 1'b0;
-	localparam	AW = LGMEMSZ - 2;
-	input	wire			i_clk, i_reset;
-	input	wire			i_wb_cyc, i_wb_stb, i_wb_we;
-	input	wire	[(AW-1):0]	i_wb_addr;
-	input	wire	[(DW-1):0]	i_wb_data;
-	input	wire	[(DW/8-1):0]	i_wb_sel;
-	output	reg			o_wb_ack;
-	output	wire			o_wb_stall;
-	output	reg	[(DW-1):0]	o_wb_data;
+// }}}
+module	memdev #(
+		// {{{
+		parameter	LGMEMSZ=15, DW=32, EXTRACLOCK= 1,
+		parameter	HEXFILE="",
+		parameter [0:0]	OPT_ROM = 1'b0,
+		localparam	AW = LGMEMSZ - 2
+		// }}}
+	) (
+		// {{{
+		input	wire			i_clk, i_reset,
+		input	wire			i_wb_cyc, i_wb_stb, i_wb_we,
+		input	wire	[(AW-1):0]	i_wb_addr,
+		input	wire	[(DW-1):0]	i_wb_data,
+		input	wire	[(DW/8-1):0]	i_wb_sel,
+		output	wire			o_wb_stall,
+		output	reg			o_wb_ack,
+		output	reg	[(DW-1):0]	o_wb_data
+		// }}}
+	);
 
+	// Local declarations
+	// {{{
 	wire			w_wstb, w_stb;
 	wire	[(DW-1):0]	w_data;
 	wire	[(AW-1):0]	w_addr;
 	wire	[(DW/8-1):0]	w_sel;
 
+	// Declare the memory itself
 	reg	[(DW-1):0]	mem	[0:((1<<AW)-1)];
+	// }}}
 
+	// Initialize the memory
+	// {{{
 	generate if (HEXFILE != 0)
 	begin : PRELOAD_MEMORY
 
 		initial	$readmemh(HEXFILE, mem);
 
 	end endgenerate
+	// }}}
 
-	generate
-	if (EXTRACLOCK == 0)
-	begin
-
+	// Optionally add an extra clock
+	// {{{
+	generate if (EXTRACLOCK == 0)
+	begin : NO_EXTRA_CLOCK
+		// {{{
 		assign	w_wstb = (i_wb_stb)&&(i_wb_we);
 		assign	w_stb  = i_wb_stb;
 		assign	w_addr = i_wb_addr;
 		assign	w_data = i_wb_data;
 		assign	w_sel  = i_wb_sel;
-
-	end else begin
-
+		// }}}
+	end else begin : EXTRA_MEM_CLOCK_CYCLE
+		// {{{
 		reg		last_wstb, last_stb;
+		reg	[(AW-1):0]	last_addr;
+		reg	[(DW-1):0]	last_data;
+		reg	[(DW/8-1):0]	last_sel;
+
 		always @(posedge i_clk)
 			last_wstb <= (i_wb_stb)&&(i_wb_we);
 
@@ -97,9 +112,6 @@ module	memdev(i_clk, i_reset,
 		else
 			last_stb <= (i_wb_stb);
 
-		reg	[(AW-1):0]	last_addr;
-		reg	[(DW-1):0]	last_data;
-		reg	[(DW/8-1):0]	last_sel;
 		always @(posedge i_clk)
 			last_data <= i_wb_data;
 		always @(posedge i_clk)
@@ -112,14 +124,21 @@ module	memdev(i_clk, i_reset,
 		assign	w_addr = last_addr;
 		assign	w_data = last_data;
 		assign	w_sel  = last_sel;
+		// }}}
 	end endgenerate
+	// }}}
 
+	// Read from memory
+	// {{{
 	always @(posedge i_clk)
 		o_wb_data <= mem[w_addr];
+	// }}}
 
+	// Write to memory (if not a ROM)
+	// {{{
 	generate if (!OPT_ROM)
 	begin : WRITE_TO_MEMORY
-
+		// {{{
 		always @(posedge i_clk)
 		begin
 			if ((w_wstb)&&(w_sel[3]))
@@ -136,28 +155,42 @@ module	memdev(i_clk, i_reset,
 
 		// Make Verilator happy
 		// Verilator lint_off UNUSED
-		wire	[DW+DW/8:0]	rom_unused;
-		assign	rom_unused = { w_wstb, w_data, w_sel };
+		wire	rom_unused;
+		assign	rom_unused = &{ 1'b0, w_wstb, w_data, w_sel };
 		// Verilator lint_on  UNUSED
 `endif
+		// }}}
 	end endgenerate
+	// }}}
 
+	// o_wb_ack
+	// {{{
 	initial	o_wb_ack = 1'b0;
 	always @(posedge i_clk)
 	if (i_reset)
 		o_wb_ack <= 1'b0;
 	else
 		o_wb_ack <= (w_stb)&&(i_wb_cyc);
+	// }}}
 
 	assign	o_wb_stall = 1'b0;
 
 	// Make verilator happy
+	// {{{
 	// verilator lint_off UNUSED
 	wire	unused;
 	assign	unused = i_wb_cyc;
 	// verilator lint_on UNUSED
-
-
+	// }}}
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+//
+// Formal properties
+// {{{
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
 `ifdef	FORMAL
 	reg	f_past_valid;
 	initial	f_past_valid = 1'b0;
@@ -249,6 +282,6 @@ module	memdev(i_clk, i_reset,
 	always @(posedge i_clk)
 	if ((f_past_valid)&&(OPT_ROM))
 		assert($stable(f_data));
-	
 `endif
+// }}}
 endmodule

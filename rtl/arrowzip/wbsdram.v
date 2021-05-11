@@ -1,7 +1,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 //
 // Filename: 	wbsdram.v
-//
+// {{{
 // Project:	ArrowZip, a demonstration of the Arrow MAX1000 FPGA board
 //
 // Purpose:	Provide 32-bit wishbone access to the SDRAM memory on a MAX1000
@@ -21,9 +21,9 @@
 //		Gisselquist Technology, LLC
 //
 ////////////////////////////////////////////////////////////////////////////////
-//
-// Copyright (C) 2015-2019, Gisselquist Technology, LLC
-//
+// }}}
+// Copyright (C) 2015-2021, Gisselquist Technology, LLC
+// {{{
 // This program is free software (firmware): you can redistribute it and/or
 // modify it under the terms of  the GNU General Public License as published
 // by the Free Software Foundation, either version 3 of the License, or (at
@@ -38,59 +38,94 @@
 // with this program.  (It's in the $(ROOT)/doc directory.  Run make with no
 // target there if the PDF file isn't present.)  If not, see
 // <http://www.gnu.org/licenses/> for a copy.
-//
+// }}}
 // License:	GPL, v3, as defined and found on www.gnu.org,
+// {{{
 //		http://www.gnu.org/licenses/gpl.html
-//
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-//
 `default_nettype	none
-//
+// }}}
 `define	DMOD_GETINPUT	1'b0
 `define	DMOD_PUTOUTPUT	1'b1
 `define	RAM_OPERATIONAL	2'b00
 `define	RAM_POWER_UP	2'b01
 `define	RAM_SET_MODE	2'b10
 `define	RAM_INITIAL_REFRESH	2'b11
-//
-module	wbsdram(i_clk,
-		i_wb_cyc, i_wb_stb, i_wb_we, i_wb_addr, i_wb_data, i_wb_sel,
-			o_wb_ack, o_wb_stall, o_wb_data,
-		o_ram_cs_n, o_ram_cke, o_ram_ras_n, o_ram_cas_n, o_ram_we_n,
-			o_ram_bs, o_ram_addr,
-			o_ram_dmod, i_ram_data, o_ram_data, o_ram_dqm,
-		o_debug);
-	parameter	RDLY = 6;
-	localparam	NCA=8, NRA=12, AW=(NCA+NRA+2)-1, DW=32;
-	localparam	[NCA-2:0] COL_THRESHOLD = -16;
-	input	wire			i_clk;
-	// Wishbone
-	//	inputs
-	input	wire			i_wb_cyc, i_wb_stb, i_wb_we;
-	input	wire	[(AW-1):0]	i_wb_addr;
-	input	wire	[(DW-1):0]	i_wb_data;
-	input	wire	[(DW/8-1):0]	i_wb_sel;
-	//	outputs
-	output	wire		o_wb_ack;
-	output	reg		o_wb_stall;
-	output	wire [31:0]	o_wb_data;
-	// SDRAM control
-	output	wire		o_ram_cke;
-	output	reg		o_ram_cs_n,
-				o_ram_ras_n, o_ram_cas_n, o_ram_we_n;
-	output	reg	[1:0]	o_ram_bs;
-	output	reg	[11:0]	o_ram_addr;
-	output	reg		o_ram_dmod;
-	input		[15:0]	i_ram_data;
-	output	reg	[15:0]	o_ram_data;
-	output	reg	[1:0]	o_ram_dqm;
-	output	wire [(DW-1):0]	o_debug;
+// }}}
+module	wbsdram #(
+		// {{{
+		parameter	RDLY = 6,
+		parameter	NCA=8, NRA=12, AW=(NCA+NRA+2)-1, DW=32,
+		parameter	[NCA-2:0] COL_THRESHOLD = -16
+		// }}}
+	) (
+		// {{{
+		input	wire			i_clk,
+		// Wishbone
+		// {{{
+		//	inputs
+		input	wire			i_wb_cyc, i_wb_stb, i_wb_we,
+		input	wire	[(AW-1):0]	i_wb_addr,
+		input	wire	[(DW-1):0]	i_wb_data,
+		input	wire	[(DW/8-1):0]	i_wb_sel,
+		//	outputs
+		output	reg		o_wb_stall,
+		output	wire		o_wb_ack,
+		output	wire [31:0]	o_wb_data,
+		// }}}
+		// SDRAM control
+		output	reg		o_ram_cs_n,
+		output	wire		o_ram_cke,
+		output	reg		o_ram_ras_n, o_ram_cas_n, o_ram_we_n,
+		output	reg	[1:0]	o_ram_bs,
+		output	reg	[11:0]	o_ram_addr,
+		output	reg		o_ram_dmod,
+		input		[15:0]	i_ram_data,
+		output	reg	[15:0]	o_ram_data,
+		output	reg	[1:0]	o_ram_dqm,
+		output	wire [(DW-1):0]	o_debug
+		// }}}
+	);
 
+	// Local declarations
+	// {{{
+	reg			need_refresh;
+	reg	[9:0]		refresh_clk;
+	wire			refresh_cmd;
+	reg			in_refresh;
+	reg	[2:0]		in_refresh_clk;
+	reg	[2:0]		bank_active	[0:3];
+	reg	[(RDLY-1):0]	r_barrell_ack;
+	reg			r_pending;
+	reg			r_we;
+	reg	[(AW-1):0]	r_addr;
+	reg	[31:0]		r_data;
+	reg	[3:0]		r_sel;
+	reg	[(AW-NCA-2):0]	bank_row	[0:3];
+	reg	[2:0]		clocks_til_idle;
+	reg	[1:0]		m_state;
+	wire			bus_cyc;
+	reg			nxt_dmod;
+	wire			pending;
+	reg	[(AW-1):0]	fwd_addr;
+	wire	[1:0]	wb_bs, r_bs, fwd_bs;	// Bank select
+	wire	[NRA-1:0]	wb_row, r_row, fwd_row;
+	reg	r_bank_valid;
+	reg	fwd_bank_valid;
+	reg	maintenance_mode;
+	reg	m_ram_cs_n, m_ram_ras_n, m_ram_cas_n, m_ram_we_n, m_ram_dmod;
+	reg	[(NRA-1):0]	m_ram_addr;
+	reg		startup_hold;
+	reg	[15:0]	startup_idle;
+	reg	[3:0]	maintenance_clocks;
+	reg		maintenance_clocks_zero;
+	reg	[15:0]	last_ram_data;
+	// }}}
 
 	// Calculate some metrics
-
+	// {{{
 	//
 	// First, do we *need* a refresh now --- i.e., must we break out of
 	// whatever we are doing to issue a refresh command?
@@ -110,11 +145,17 @@ module	wbsdram(i_clk,
 	// some later time we should address this, once we are entirely
 	// convinced that the memory is otherwise working without failure.  Of
 	// course, at that time, it may no longer be a priority ...
+	// // }}}
+	////////////////////////////////////////////////////////////////////////
 	//
-	reg		need_refresh;
-	reg	[9:0]	refresh_clk;
-	wire	refresh_cmd;
+	// Clock counting to know when to refresh
+	// {{{
+	////////////////////////////////////////////////////////////////////////
+	//
 	assign	refresh_cmd = (!o_ram_cs_n)&&(!o_ram_ras_n)&&(!o_ram_cas_n)&&(o_ram_we_n);
+
+	// refresh_clk
+	// {{{
 	initial	refresh_clk = 0;
 	always @(posedge i_clk)
 	begin
@@ -123,40 +164,39 @@ module	wbsdram(i_clk,
 		else if (|refresh_clk)
 			refresh_clk <= refresh_clk - 10'h1;
 	end
+	// }}}
+
+	// need_refresh
+	// {{{
 	initial	need_refresh = 1'b0;
 	always @(posedge i_clk)
 		need_refresh <= (refresh_clk == 10'h00)&&(!refresh_cmd);
+	// }}}
 
-	reg	in_refresh;
-	reg	[2:0]	in_refresh_clk;
+	// in_refresh_clk
+	// {{{
 	initial	in_refresh_clk = 3'h0;
 	always @(posedge i_clk)
-		if (refresh_cmd)
-			in_refresh_clk <= 3'h6;
-		else if (|in_refresh_clk)
-			in_refresh_clk <= in_refresh_clk - 3'h1;
+	if (refresh_cmd)
+		in_refresh_clk <= 3'h6;
+	else if (|in_refresh_clk)
+		in_refresh_clk <= in_refresh_clk - 3'h1;
+	// }}}
+
+	// in_refresh
+	// {{{
 	initial	in_refresh = 0;
 	always @(posedge i_clk)
 		in_refresh <= (in_refresh_clk != 3'h0)||(refresh_cmd);
 `ifdef	FORMAL
 	always @(posedge i_clk)
-		if (in_refresh)
-			assert((refresh_cmd)||($past(in_refresh_clk) <= 3'h6));
+	if (in_refresh)
+		assert((refresh_cmd)||($past(in_refresh_clk) <= 3'h6));
 	always @(posedge i_clk)
-		if (in_refresh)
-			assert(refresh_clk==10'd619+{{(7){1'b0}},in_refresh_clk});
+	if (in_refresh)
+		assert(refresh_clk==10'd619+{{(7){1'b0}},in_refresh_clk});
 `endif
-
-
-	reg	[2:0]		bank_active	[0:3];
-	reg	[(RDLY-1):0]	r_barrell_ack;
-	reg			r_pending;
-	reg			r_we;
-	reg	[(AW-1):0]	r_addr;
-	reg	[31:0]		r_data;
-	reg	[3:0]		r_sel;
-	reg	[(AW-NCA-2):0]	bank_row	[0:3];
-
+	// }}}
 
 	//
 	// Second, do we *need* a precharge now --- must be break out of
@@ -167,17 +207,19 @@ module	wbsdram(i_clk,
 	// You may also notice that the precharge requirement is tighter
 	// than this one, so ... perhaps this isn't as required?
 	//
-
-	reg	[2:0]	clocks_til_idle;
-	reg	[1:0]	m_state;
-	wire		bus_cyc;
+	// }}}
+	////////////////////////////////////////////////////////////////////////
+	//
+	// Incoming bus request handling and skidbuffer
+	// {{{
+	////////////////////////////////////////////////////////////////////////
+	//
+	//
 	assign	bus_cyc  = ((i_wb_cyc)&&(i_wb_stb)&&(!o_wb_stall));
-	reg	nxt_dmod;
 
-	// Pre-process pending operations
-	wire	pending;
+	// fwd_addr, r_*: Pre-process pending operations
+	// {{{
 	initial	r_pending = 1'b0;
-	reg	[(AW-1):0]	fwd_addr;
 	initial	r_addr = 0;
 	initial	fwd_addr = { {(AW-(NCA)){1'b0}}, 1'b1, {(NCA-1){1'b0}} };
 	always @(posedge i_clk)
@@ -203,52 +245,56 @@ module	wbsdram(i_clk,
 	always @(*)
 		assert(fwd_addr[NCA-3:0] == 0);
 `endif
+	// }}}
 
-	wire	[1:0]	wb_bs, r_bs, fwd_bs;	// Bank select
 	assign	wb_bs = i_wb_addr[NCA:NCA-1];
 	assign	r_bs  =    r_addr[NCA:NCA-1];
 	assign fwd_bs =  fwd_addr[NCA:NCA-1];
-	wire	[NRA-1:0]	wb_row, r_row, fwd_row;
+
 	assign	wb_row = i_wb_addr[AW-1:NCA+1];
 	assign	 r_row =    r_addr[AW-1:NCA+1];
 	assign fwd_row =  fwd_addr[AW-1:NCA+1];
 
-	reg	r_bank_valid;
+	// r_bank_valid
+	// {{{
 	initial	r_bank_valid = 1'b0;
 	always @(posedge i_clk)
-		if (bus_cyc)
-			r_bank_valid <=((bank_active[wb_bs][2])
-					&&(bank_row[wb_bs] == wb_row));
-		else
-			r_bank_valid <= ((bank_active[r_bs][2])
+	if (bus_cyc)
+		r_bank_valid <=((bank_active[wb_bs][2])
+				&&(bank_row[wb_bs] == wb_row));
+	else
+		r_bank_valid <= ((bank_active[r_bs][2])
 				&&(bank_row[r_bs] == r_row));
+	// }}}
 
-	reg	fwd_bank_valid;
+	// fwd_bank_valid
+	// {{{
 	initial	fwd_bank_valid = 0;
 	always @(posedge i_clk)
 		fwd_bank_valid <= ((bank_active[fwd_bs][2])
 				&&(bank_row[fwd_bs] == fwd_row));
+	// }}}
 
 	assign	pending = (r_pending)&&(o_wb_stall);
-
+	// }}}
+	////////////////////////////////////////////////////////////////////////
 	//
+	// SDRAM protocol handling
+	// {{{
+	////////////////////////////////////////////////////////////////////////
 	//
-	// Maintenance mode (i.e. startup) wires and logic
-	reg	maintenance_mode;
-	reg	m_ram_cs_n, m_ram_ras_n, m_ram_cas_n, m_ram_we_n, m_ram_dmod;
-	reg	[(NRA-1):0]	m_ram_addr;
-	//
-	//
-	//
-
 	// Address MAP:
+	// {{{
 	//	22-bits bits in, 23-bits out
 	//
 	//	22 1111 1111 1100 0000 0000
 	//	10 9876 5432 1098 7654 3210
 	//	rr rrrr rrrr rrBB cccc cccc 0
 	//	                  8765 4321 0
-	//
+	// }}}
+
+	// Monster state machine
+	// {{{
 	initial r_barrell_ack = 0;
 	initial	clocks_til_idle = 3'h0;
 	initial o_wb_stall = 1'b1;
@@ -267,6 +313,7 @@ module	wbsdram(i_clk,
 	always @(posedge i_clk)
 	if (maintenance_mode)
 	begin
+		// {{{
 		bank_active[0] <= 0;
 		bank_active[1] <= 0;
 		bank_active[2] <= 0;
@@ -282,6 +329,7 @@ module	wbsdram(i_clk,
 		o_ram_addr  <= m_ram_addr;
 		o_ram_bs    <= 2'b00;
 		nxt_dmod <= `DMOD_GETINPUT;
+		// }}}
 	end else begin
 		o_wb_stall <= (r_pending)||(bus_cyc);
 		if (!i_wb_cyc)
@@ -291,7 +339,8 @@ module	wbsdram(i_clk,
 		nxt_dmod <= `DMOD_GETINPUT;
 		o_ram_dmod <= nxt_dmod;
 
-		//
+		// default bank_active
+		// {{{
 		// We assume that, whatever state the bank is in, that it
 		// continues in that state and set up a series of shift
 		// registers to contain that information.  If it will not
@@ -302,7 +351,7 @@ module	wbsdram(i_clk,
 		bank_active[1] <= { bank_active[1][2], bank_active[1][2:1] };
 		bank_active[2] <= { bank_active[2][2], bank_active[2][2:1] };
 		bank_active[3] <= { bank_active[3][2], bank_active[3][2:1] };
-		//
+		// }}}
 		o_ram_cs_n <= (!i_wb_cyc);
 		// o_ram_cke  <= 1'b1;
 		if (|clocks_til_idle[2:0])
@@ -338,6 +387,7 @@ module	wbsdram(i_clk,
 				||(bank_active[2][2])
 				||(bank_active[3][2]))
 			begin  // Close all active banks
+				// {{{
 				o_ram_cs_n  <= 1'b0;
 				o_ram_ras_n <= 1'b0;
 				o_ram_cas_n <= 1'b1;
@@ -347,6 +397,7 @@ module	wbsdram(i_clk,
 				bank_active[1][2] <= 1'b0;
 				bank_active[2][2] <= 1'b0;
 				bank_active[3][2] <= 1'b0;
+				// }}}
 			end else if ((|bank_active[0])
 					||(|bank_active[1])
 					||(|bank_active[2])
@@ -354,16 +405,19 @@ module	wbsdram(i_clk,
 				// Can't precharge yet, the bus is still busy
 			begin end else if ((!in_refresh)&&((refresh_clk[9:8]==2'b00)||(need_refresh)))
 			begin // Send autorefresh command
+				// {{{
 				o_ram_cs_n  <= 1'b0;
 				o_ram_ras_n <= 1'b0;
 				o_ram_cas_n <= 1'b0;
 				o_ram_we_n  <= 1'b1;
+				// }}}
 			end // Else just send NOOP's, the default command
 		end else if (in_refresh)
 		begin
 			// NOOPS only here, until we are out of refresh
 		end else if ((pending)&&(!r_bank_valid)&&(bank_active[r_bs]==3'h0))
 		begin // Need to activate the requested bank
+			// {{{
 			o_ram_cs_n  <= 1'b0;
 			o_ram_ras_n <= 1'b0;
 			o_ram_cas_n <= 1'b1;
@@ -373,10 +427,11 @@ module	wbsdram(i_clk,
 			// clocks_til_idle[2:0] <= 1;
 			bank_active[r_bs][2] <= 1'b1;
 			bank_row[r_bs] <= r_row;
-			//
+			// }}}
 		end else if ((pending)&&(!r_bank_valid)
 				&&(bank_active[r_bs]==3'b111))
 		begin // Need to close an active bank
+			// {{{
 			o_ram_cs_n  <= 1'b0;
 			o_ram_ras_n <= 1'b0;
 			o_ram_cas_n <= 1'b1;
@@ -387,11 +442,13 @@ module	wbsdram(i_clk,
 			// clocks_til_idle[2:0] <= 1;
 			bank_active[r_bs][2] <= 1'b0;
 			// bank_row[r_bs] <= r_row;
+			// }}}
 		end else if ((pending)&&(!r_we)
 				&&(bank_active[r_bs][2])
 				&&(r_bank_valid)
 				&&(clocks_til_idle[2:0] < 4))
 		begin // Issue the read command
+			// {{{
 			o_ram_cs_n  <= 1'b0;
 			o_ram_ras_n <= 1'b1;
 			o_ram_cas_n <= 1'b0;
@@ -402,11 +459,13 @@ module	wbsdram(i_clk,
 
 			o_wb_stall <= 1'b0;
 			r_barrell_ack[(RDLY-1)] <= 1'b1;
+			// }}}
 		end else if ((pending)&&(r_we)
 			&&(bank_active[r_bs][2])
 			&&(r_bank_valid)
 			&&(clocks_til_idle[2:0] == 0))
 		begin // Issue the write command
+			// {{{
 			o_ram_cs_n  <= 1'b0;
 			o_ram_ras_n <= 1'b1;
 			o_ram_cas_n <= 1'b0;
@@ -421,12 +480,14 @@ module	wbsdram(i_clk,
 			//
 			o_ram_dmod <= `DMOD_PUTOUTPUT;
 			nxt_dmod <= `DMOD_PUTOUTPUT;
+			// }}}
 		end else if ((r_pending)&&(r_addr[(NCA-2):0] >= COL_THRESHOLD)
 				&&(!fwd_bank_valid))
 		begin
 			// Do I need to close the next bank I'll need?
 			if (bank_active[fwd_bs][2:1]==2'b11)
 			begin // Need to close the bank first
+				// {{{
 				o_ram_cs_n <= 1'b0;
 				o_ram_ras_n <= 1'b0;
 				o_ram_cas_n <= 1'b1;
@@ -434,9 +495,11 @@ module	wbsdram(i_clk,
 				o_ram_addr[10] <= 1'b0;
 				o_ram_bs       <= fwd_bs;
 				bank_active[fwd_bs][2] <= 1'b0;
+				// }}}
 			end else if (bank_active[fwd_bs]==0)
 			begin
 				// Need to (pre-)activate the next bank
+				// {{{
 				o_ram_cs_n  <= 1'b0;
 				o_ram_ras_n <= 1'b0;
 				o_ram_cas_n <= 1'b1;
@@ -446,32 +509,44 @@ module	wbsdram(i_clk,
 				// clocks_til_idle[3:0] <= 1;
 				bank_active[fwd_bs] <= 3'h4;
 				bank_row[fwd_bs] <= fwd_row;
+				// }}}
 			end
 		end
 		if (!i_wb_cyc)
 			r_barrell_ack <= 0;
 	end
+	// }}}
+	// }}}
+	////////////////////////////////////////////////////////////////////////
+	//
+	// Startup handling
+	// {{{
+	////////////////////////////////////////////////////////////////////////
+	//
+	//
 
-	reg		startup_hold;
-	reg	[15:0]	startup_idle;
+	// startup_idle, startup_hold
+	// {{{
 	initial	startup_idle = 16'd20500;
 	initial	startup_hold = 1'b1;
 	always @(posedge i_clk)
-		if (|startup_idle)
-			startup_idle <= startup_idle - 1'b1;
+	if (|startup_idle)
+		startup_idle <= startup_idle - 1'b1;
+
 	always @(posedge i_clk)
 		startup_hold <= |startup_idle;
 `ifdef	FORMAL
 	always @(*)
-		if (startup_hold)
-			assert(maintenance_mode);
+	if (startup_hold)
+		assert(maintenance_mode);
 	always @(*)
-		if (|startup_idle)
-			assert(startup_hold);
+	if (|startup_idle)
+		assert(startup_hold);
 `endif
+	// }}}
 
-	reg	[3:0]	maintenance_clocks;
-	reg		maintenance_clocks_zero;
+	// Maintenance state machine
+	// {{{
 	initial	maintenance_mode = 1'b1;
 	initial	maintenance_clocks = 4'hf;
 	initial	maintenance_clocks_zero = 1'b0;
@@ -495,6 +570,7 @@ module	wbsdram(i_clk,
 		m_ram_addr  <= { 2'b00, 1'b0, 2'b00, 3'b010, 1'b0, 3'b001 };
 		if (m_state == `RAM_POWER_UP)
 		begin
+			// {{{
 			// All signals must be held in NOOP state during powerup
 			// m_ram_cke <= 1'b1;
 			m_ram_cs_n  <= 1'b1;
@@ -514,8 +590,10 @@ module	wbsdram(i_clk,
 				m_ram_we_n  <= 1'b0;
 				m_ram_addr[10] <= 1'b1;
 			end
+			// }}}
 		end else if (m_state == `RAM_SET_MODE)
 		begin
+			// {{{
 			// Wait
 			m_ram_cs_n     <= 1'b1;
 			m_ram_cs_n     <= 1'b1;
@@ -538,8 +616,10 @@ module	wbsdram(i_clk,
 				maintenance_clocks <= 4'hc;
 				maintenance_clocks_zero <= 1'b0;
 			end
+			// }}}
 		end else if (m_state == `RAM_INITIAL_REFRESH)
 		begin
+			// {{{
 			// Refresh command
 			if (maintenance_clocks > 4'ha)
 				// Wait two clocks first
@@ -555,15 +635,30 @@ module	wbsdram(i_clk,
 			// m_ram_addr  <= { 3'b000, 1'b0, 2'b00, 3'b010, 1'b0, 3'b001 };
 			if (maintenance_clocks_zero)
 				maintenance_mode <= 1'b0;
+			// }}}
 		end
 	end
+	// }}}
+	// }}}
+	////////////////////////////////////////////////////////////////////////
+	//
+	// Bus return handling
+	// {{{
+	////////////////////////////////////////////////////////////////////////
+	//
+	//
 
+	// o_ram_data
+	// {{{
 	always @(posedge i_clk)
 	if (nxt_dmod)
 		o_ram_data <= r_data[15:0];
 	else
 		o_ram_data <= r_data[31:16];
+	// }}}
 
+	// o_ram_dqm -- byte strobes
+	// {{{
 	always @(posedge i_clk)
 	if (maintenance_mode)
 		o_ram_dqm <= 2'b11;
@@ -575,8 +670,10 @@ module	wbsdram(i_clk,
 			o_ram_dqm <= ~r_sel[3:2];
 	end else
 		o_ram_dqm <= 2'b00;
+	// }}}
 
 `ifdef	VERILATOR
+	// {{{
 	// While I hate to build something that works one way under Verilator
 	// and another way in practice, this really isn't that.  The problem
 	// \/erilator is having is resolved in toplevel.v---one file that
@@ -584,21 +681,28 @@ module	wbsdram(i_clk,
 	// single clocked latch but two taking place.  Here, we replicate one
 	// of those.  The second takes place (somehow) within the sdramsim.cpp
 	// file.
-	reg	[15:0]	ram_data, last_ram_data;
+	reg	[15:0]	ram_data;
 	always @(posedge i_clk)
 		ram_data <= i_ram_data;
 	always @(posedge i_clk)
 		last_ram_data <= ram_data;
 	assign	o_wb_data = { last_ram_data, ram_data };
+	// }}}
 `else
-	reg	[15:0]	last_ram_data;
 	always @(posedge i_clk)
 		last_ram_data <= i_ram_data;
 	assign	o_wb_data = { last_ram_data, i_ram_data };
 `endif
 	assign	o_wb_ack  = r_barrell_ack[0];
-
+	// }}}
+	////////////////////////////////////////////////////////////////////////
 	//
+	// Debugging bus
+	// {{{
+	////////////////////////////////////////////////////////////////////////
+	//
+	//
+
 	// The following outputs are not necessary for the functionality of
 	// the SDRAM, but they can be used to feed an external "scope" to
 	// get an idea of what the internals of this SDRAM are doing.
@@ -616,7 +720,7 @@ module	wbsdram(i_clk,
 			&&(o_wb_ack)&&(!i_wb_we));
 
 
-	assign	o_debug = { i_wb_cyc, i_wb_stb, i_wb_we, o_wb_ack, o_wb_stall, // 5
+	assign	o_debug = { i_wb_cyc,i_wb_stb,i_wb_we,o_wb_ack, o_wb_stall, // 5
 		o_ram_cs_n, o_ram_ras_n, o_ram_cas_n, o_ram_we_n, o_ram_bs,//6
 			o_ram_dmod, r_pending, 				//  2
 			trigger,					//  1
@@ -625,15 +729,37 @@ module	wbsdram(i_clk,
 				: { o_wb_data[23:20], o_wb_data[3:0] }
 			// i_ram_data[7:0]
 			 };
+	// }}}
 
 	// Make Verilator happy
+	// {{{
 	// verilator lint_off UNUSED
-	wire	[NCA-1:0]	unused;
-	assign	unused = { fwd_addr[NCA-1:0] };
+	wire	unused;
+	assign	unused = &{ 1'b0, fwd_addr[NCA-1:0] };
 	// verilator lint_on  UNUSED
+	// }}}
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+//
+// Formal properties
+// {{{
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
 `ifdef	FORMAL
 	localparam	REFRESH_CLOCKS = 6;
 	localparam	ACTIVATE_CLOCKS = 6;
+	reg			f_past_valid;
+	wire	[(5-1):0]	f_nreqs, f_nacks, f_outstanding;
+	wire			f_reset;
+	wire	[(2+AW+DW+DW/8-1):0]	f_pending, f_request;
+	wire	[4:0]		f_cmd;
+	reg	[(AW-1):0]	f_next_addr;
+	wire	[NRA-1:0]	f_next_row, f_this_row;
+	wire	[1:0]		f_next_bank, f_this_bank;
+	reg	[3:0]		f_acks_pending;
+
 
 	// This device is 23MB, assert such
 	always @(*)
@@ -641,13 +767,9 @@ module	wbsdram(i_clk,
 	always @(*)
 		assert(NRA+NCA+2 == AW+1);
 
-	wire	[(5-1):0]	f_nreqs, f_nacks, f_outstanding;
-	reg	f_past_valid;
-	wire	f_reset;
-
 	always @(*)
-		if (o_ram_dmod)
-			assume(i_ram_data == o_ram_data);
+	if (o_ram_dmod)
+		assume(i_ram_data == o_ram_data);
 
 	initial	f_past_valid = 1'b0;
 	always @(posedge i_clk)
@@ -656,12 +778,14 @@ module	wbsdram(i_clk,
 	assign	f_reset = !f_past_valid;
 
 	always @(*)
-		if (o_ram_dmod)
-			assert(i_ram_data == o_ram_data);
+	if (o_ram_dmod)
+		assert(i_ram_data == o_ram_data);
 
 	// Properties
 	// 1. Wishbone
-	fwb_slave #( .AW(AW), .DW(DW),
+	fwb_slave #(
+		// {{{
+		.AW(AW), .DW(DW),
 			.F_MAX_STALL(ACTIVATE_CLOCKS + REFRESH_CLOCKS
 					+ ACTIVATE_CLOCKS + RDLY
 					+ACTIVATE_CLOCKS),
@@ -669,12 +793,17 @@ module	wbsdram(i_clk,
 				+ ACTIVATE_CLOCKS
 				+ ACTIVATE_CLOCKS
 				+ ACTIVATE_CLOCKS+RDLY),
-			.F_LGDEPTH(5))
-		fwb(i_clk, f_reset,
+			.F_LGDEPTH(5)
+			// }}}
+	) fwb(
+		// {{{
+		i_clk, f_reset,
 			i_wb_cyc, i_wb_stb, i_wb_we, i_wb_addr,
 				i_wb_data, i_wb_sel,
 			o_wb_ack, o_wb_stall, o_wb_data, 1'b0,
-			f_nreqs, f_nacks, f_outstanding);
+			f_nreqs, f_nacks, f_outstanding
+		// }}}
+	);
 
 	// 2. Proper startup ...
 	// 3. Operation
@@ -690,8 +819,8 @@ module	wbsdram(i_clk,
 
 	// On the very first clock, we must always start up in maintenance mode
 	always @(posedge i_clk)
-		if (!f_past_valid)
-			assert(maintenance_mode);
+	if (!f_past_valid)
+		assert(maintenance_mode);
 
 	// Just to make things simpler, assume no accesses to the core during
 	// maintenance mode.  Such accesses might violate our minimum
@@ -720,7 +849,6 @@ module	wbsdram(i_clk,
 	if ((f_past_valid)&&(maintenance_mode))
 		assert(!r_pending);
 
-	wire	[(2+AW+DW+DW/8-1):0]	f_pending, f_request;
 	assign	f_pending = { r_pending, r_we, r_addr, r_data, r_sel };
 	assign	f_request = {  i_wb_stb, i_wb_we, i_wb_addr, i_wb_data, i_wb_sel };
 
@@ -731,7 +859,6 @@ module	wbsdram(i_clk,
 			||($past(o_ram_cas_n))) )
 		assert($stable(f_pending));
 
-	wire	[4:0]	f_cmd;
 	assign	f_cmd = { o_ram_addr[10],
 			o_ram_cs_n, o_ram_ras_n, o_ram_cas_n, o_ram_we_n };
 
@@ -748,15 +875,12 @@ module	wbsdram(i_clk,
 `define	F_REFRESH_S		4'b0001
 `define	F_NOOP_S		4'b0111
 
-	reg	[(AW-1):0]	f_next_addr;
 	always @(*)
 	begin
 		f_next_addr = 0;
 		f_next_addr[(AW-1):NCA-1] = r_addr[(AW-1):NCA-1] + 1'b1;
 	end
 
-	wire	[NRA-1:0]	f_next_row, f_this_row;
-	wire	[1:0]	f_next_bank, f_this_bank;
 	assign	f_next_row  = f_next_addr[(AW-1):(NCA+1)];
 	assign	f_next_bank = f_next_addr[NCA:NCA-1];
 	assign	f_this_bank = r_bs;
@@ -902,7 +1026,6 @@ module	wbsdram(i_clk,
 	if ((f_past_valid)&&($past(o_wb_ack)))
 		assert(!o_wb_ack);
 
-	reg	[3:0]	f_acks_pending;
 	always @(*)
 	begin
 		f_acks_pending = 0;
@@ -1035,4 +1158,5 @@ module	wbsdram(i_clk,
 		assert(o_ram_dqm);
 	end
 `endif
+// }}}
 endmodule

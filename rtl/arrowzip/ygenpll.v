@@ -1,7 +1,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 //
 // Filename: 	ygenpll.v
-//
+// {{{
 // Project:	ArrowZip, a demonstration of the Arrow MAX1000 FPGA board
 //
 // Purpose:	Creates a single ended, bi-directional port for both input
@@ -11,9 +11,9 @@
 //		Gisselquist Technology, LLC
 //
 ////////////////////////////////////////////////////////////////////////////////
-//
-// Copyright (C) 2019, Gisselquist Technology, LLC
-//
+// }}}
+// Copyright (C) 2019-2021, Gisselquist Technology, LLC
+// {{{
 // This program is free software (firmware): you can redistribute it and/or
 // modify it under the terms of  the GNU General Public License as published
 // by the Free Software Foundation, either version 3 of the License, or (at
@@ -37,17 +37,21 @@
 //
 //
 `default_nettype none
-//
-module	ygenpll(i_clk, o_ck0, o_ck1);
-	input	wire		i_clk;
-	output	wire		o_ck0;
-	output	wire		o_ck1;
+// }}}
+module	ygenpll (
+		// {{{
+		input	wire		i_clk,
+		output	wire		o_ck0,
+		output	wire		o_ck1
+		// }}}
+	);
 
 	wire	[4:0]	pll_outputs;
 	wire		feedback;
 
 	(* blackbox *)
 	fiftyfivenm_pll #(
+		// {{{
 		.bandwidth_type("auto"),
 		//
 		.clk0_divide_by(3),
@@ -65,7 +69,9 @@ module	ygenpll(i_clk, o_ck0, o_ck1);
 		.operation_mode("normal"),
 		.pll_type("auto"),
 		.lpm_type("fiftyfivenm_pll")
+		// }}}
 	) basicpll (
+		// {{{
 		.clk(pll_outputs),
 		.fbin(feedback),
 		.fbout(feedback),
@@ -79,7 +85,9 @@ module	ygenpll(i_clk, o_ck0, o_ck1);
 		.phaseupdown(1'b0),
 		.scanclk(1'b0),
 		.scanclkena(1'b1),
-		.scandata(1'b0));
+		.scandata(1'b0)
+		// }}}
+	);
 
 	assign	o_ck0 = pll_outputs[0];
 	assign	o_ck1 = pll_outputs[1];

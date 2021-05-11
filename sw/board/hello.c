@@ -1,7 +1,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 //
 // Filename:	helloworld.c
-//
+// {{{
 // Project:	ZBasic, a generic toplevel impl using the full ZipCPU
 //
 // Purpose:	The original Helllo World program.  If everything works, this
@@ -10,7 +10,7 @@
 //
 //
 ////////////////////////////////////////////////////////////////////////////////
-//
+// }}}
 // Gisselquist Technology asserts no ownership rights over this particular
 // hello world program.
 //
