@@ -87,6 +87,8 @@ module	ziptimer(i_clk, i_reset, i_ce,
 	output	reg		o_int;
 
 	reg			r_running;
+	reg			r_zero  = 1'b1;
+	reg	[(VW-1):0]	r_value;
 
 	wire	wb_write;
 	assign	wb_write = ((i_wb_stb)&&(i_wb_we));
@@ -132,7 +134,6 @@ module	ziptimer(i_clk, i_reset, i_ce,
 	end endgenerate
 
 
-	reg	[(VW-1):0]	r_value;
 	initial	r_value = 0;
 	always @(posedge i_clk)
 		if (i_reset)
@@ -147,7 +148,6 @@ module	ziptimer(i_clk, i_reset, i_ce,
 				r_value <= interval_count;
 		end
 
-	reg	r_zero  = 1'b1;
 	always @(posedge i_clk)
 		if (i_reset)
 			r_zero <= 1'b1;

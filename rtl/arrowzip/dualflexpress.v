@@ -287,7 +287,6 @@ module	dualflexpress(i_clk, i_reset,
 	reg		m_clk;
 	reg	[1:0]	m_dat;
 
-
 	generate if (OPT_ODDR)
 	begin
 
